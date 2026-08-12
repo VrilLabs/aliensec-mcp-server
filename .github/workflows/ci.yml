@@ -6,9 +6,7 @@ on:
   pull_request:
     branches: [master, main, develop]
 
-permissions:
-  contents: read
-  packages: read
+permissions: read-all
 
 jobs:
   test:

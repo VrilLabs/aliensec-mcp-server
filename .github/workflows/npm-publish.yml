@@ -5,9 +5,7 @@ on:
     tags:
       - 'v*'
 
-permissions:
-  contents: read
-  packages: write
+permissions: read-all
 
 jobs:
   publish:
