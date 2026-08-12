@@ -6,16 +6,21 @@ on:
   pull_request:
     branches: [main, develop]
 
+permissions: read-all
+
 jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@12b7ff3796cabd9e0da05c556468eec2f565d246
         with:
           node-version: '20'
           cache: 'npm'
@@ -39,12 +44,15 @@ jobs:
     name: Build
     runs-on: ubuntu-latest
     needs: test
+    permissions:
+      contents: read
+      packages: read
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@12b7ff3796cabd9e0da05c556468eec2f565d246
         with:
           node-version: '20'
           cache: 'npm'
@@ -69,14 +77,18 @@ jobs:
     name: Security Scan
     runs-on: ubuntu-latest
     needs: test
+    permissions:
+      contents: read
+      packages: read
+      security-events: write
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a
         with:
-          fetch-depth: 0  # Required for git history scanning
+          fetch-depth: 0
 
       - name: Run gitleaks secret scan
-        uses: gitleaks/gitleaks-action@v2
+        uses: gitleaks/gitleaks-action@bcfb9cce635345aac9996cedc19b2de8e01b894f
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITLEAKS_CONFIG: .gitleaks.toml

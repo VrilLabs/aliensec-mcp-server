@@ -69,10 +69,10 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/aliensec/aliensec-mcp-server.git"
+    "url": "https://github.com/VrilLabs/aliensec-mcp-server.git"
   },
   "bugs": {
-    "url": "https://github.com/aliensec/aliensec-mcp-server/issues"
+    "url": "https://github.com/VrilLabs/aliensec-mcp-server/issues"
   },
-  "homepage": "https://github.com/aliensec/aliensec-mcp-server#readme"
+  "homepage": "https://github.com/VrilLabs/aliensec-mcp-server#readme"
 }
