@@ -86,12 +86,12 @@
   </text>
   
   <!-- VRIL LABS Attribution -->
-  <text x="400" y="230" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="8" fill="#4B8BBE" text-anchor="middle" opacity="0.7">
+  <text x="100" y="220" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="8" fill="#4B8BBE" text-anchor="start" opacity="0.7">
     by VRIL LABS
     <animate attributeName="opacity" values="0.7;0.9;0.7" dur="6s" repeatCount="indefinite"/>
   </text>
   
-  <text x="400" y="242" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="8" fill="#5DADE2" text-anchor="middle" opacity="0.6">
+  <text x="700" y="220" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="8" fill="#5DADE2" text-anchor="end" opacity="0.6">
     vril.li
     <animate attributeName="opacity" values="0.6;0.8;0.6" dur="6s" repeatCount="indefinite"/>
   </text>
