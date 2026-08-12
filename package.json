@@ -1,0 +1,78 @@
+{
+  "name": "aliensec-mcp-server",
+  "version": "1.0.0",
+  "description": "AlienVault OTX Endpoint Security Scanning MCP Server with VirusTotal Integration",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "aliensec-mcp-server": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "start": "node dist/index.js",
+    "dev": "tsx watch src/index.ts",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix",
+    "format": "prettier --write src",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "clean": "rm -rf dist",
+    "prepack": "npm run build"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "alienvault",
+    "otx",
+    "endpoint-security",
+    "virustotal",
+    "threat-intelligence",
+    "osquery",
+    "sqlite"
+  ],
+  "author": "AlienSec Team",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.17.3",
+    "@modelcontextprotocol/server": "^2.0.0",
+    "better-sqlite3-multiple-ciphers": "^7.0.0",
+    "node-fetch": "^3.3.2",
+    "pino": "^9.4.0",
+    "pino-http": "^10.3.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.11",
+    "@types/node": "^24.10.1",
+    "@types/pino": "^7.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.13.0",
+    "@typescript-eslint/parser": "^8.13.0",
+    "@vitest/coverage-v8": "^2.1.4",
+    "eslint": "^9.14.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-prettier": "^5.2.1",
+    "prettier": "^3.3.3",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3",
+    "vite-tsconfig-paths": "^6.1.1",
+    "vitest": "^2.1.4"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/aliensec/aliensec-mcp-server.git"
+  },
+  "bugs": {
+    "url": "https://github.com/aliensec/aliensec-mcp-server/issues"
+  },
+  "homepage": "https://github.com/aliensec/aliensec-mcp-server#readme"
+}

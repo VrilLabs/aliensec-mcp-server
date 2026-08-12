@@ -1,0 +1,28 @@
+title = "AlienSec MCP Server GitLeaks Configuration"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "alienvault-api-key"
+description = "AlienVault OTX API Key"
+regex = '''(?i)(alienvault|otx)[_-]?api[_-]?key['\"\s:=]+[a-z0-9]{64,}'''
+tags = ["alienvault", "api-key"]
+
+[[rules]]
+id = "virustotal-api-key"
+description = "VirusTotal API Key"
+regex = '''(?i)virustotal[_-]?api[_-]?key(s)?['\"\s:=]+[a-f0-9]{64,}'''
+tags = ["virustotal", "api-key"]
+
+[[rules]]
+id = "database-encryption-key"
+description = "Database Encryption Key"
+regex = '''(?i)database[_-]?encryption[_-]?key['\"\s:=]+[a-zA-Z0-9+/=]{32,}'''
+tags = ["database", "encryption", "secret"]
+
+[[rules]]
+id = "generic-secret"
+description = "Generic Secret Value"
+regex = '''(?i)(secret|password|passwd|token|key|credential)['\"\s:=]+[a-zA-Z0-9+/=]{16,}'''
+tags = ["secret", "password", "token"]
