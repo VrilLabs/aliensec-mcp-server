@@ -95,7 +95,7 @@ Security updates are provided for the following versions:
 
 ## Security Advisories
 
-All security advisories are published in the [GitHub Security Advisories](https://github.com/aliensec/aliensec-mcp-server/security/advisories) section.
+All security advisories are published in the [GitHub Security Advisories](https://github.com/VrilLabs/aliensec-mcp-server/security/advisories) section.
 
 ## Credits
 

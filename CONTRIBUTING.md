@@ -8,7 +8,7 @@ Thank you for your interest in contributing to the AlienSec MCP Server! We welco
 
 If you find a bug, please:
 
-1. Check the [existing issues](https://github.com/aliensec/aliensec-mcp-server/issues) to see if it's already been reported
+1. Check the [existing issues](https://github.com/VrilLabs/aliensec-mcp-server/issues) to see if it's already been reported
 2. Open a new issue with:
    - A clear, descriptive title
    - Steps to reproduce the issue
@@ -20,7 +20,7 @@ If you find a bug, please:
 
 Feature requests are welcome! Please:
 
-1. Check the [existing issues](https://github.com/aliensec/aliensec-mcp-server/issues) for similar requests
+1. Check the [existing issues](https://github.com/VrilLabs/aliensec-mcp-server/issues) for similar requests
 2. Open a new issue with:
    - A clear description of the feature
    - The use case or problem it would solve

@@ -90,7 +90,7 @@ This server enables AI agents and applications to perform security scans on vari
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/aliensec/aliensec-mcp-server.git
+git clone https://github.com/VrilLabs/aliensec-mcp-server.git
 cd aliensec-mcp-server
 ```
 
