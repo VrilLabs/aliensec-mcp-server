@@ -1,3 +1,10 @@
+<div align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/header.svg">
+    <img alt="AlienSec MCP Server - Security Scanning Header" src="assets/header.svg" width="100%">
+  </picture>
+</div>
+
 # AlienSec MCP Server
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/VrilLabs/aliensec-mcp-server/badge)](https://scorecard.dev/viewer/?uri=github.com/VrilLabs/aliensec-mcp-server)
 
