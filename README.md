@@ -1,4 +1,5 @@
 # AlienSec MCP Server
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/VrilLabs/aliensec-mcp-server/badge)](https://scorecard.dev/viewer/?uri=github.com/VrilLabs/aliensec-mcp-server)
 
 **Production-Ready AlienVault OTX Endpoint Security Scanning MCP Server with VirusTotal Integration**
 
