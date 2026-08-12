@@ -6,8 +6,6 @@ on:
   pull_request:
     branches: [main, develop]
 
-permissions: read-all
-
 jobs:
   test:
     name: Test
