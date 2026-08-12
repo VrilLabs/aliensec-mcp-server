@@ -36,6 +36,10 @@ coverage/
 tmp/
 temp/
 
+# Backup files
+*.backup
+*.backup[0-9]
+
 # Package manager locks (optional - can be committed)
 # package-lock.json
 # pnpm-lock.yaml
