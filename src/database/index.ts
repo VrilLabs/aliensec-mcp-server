@@ -28,6 +28,10 @@ import { getConfig } from '../config';
 
 const SCHEMA_VERSION = 1;
 
+const API_KEY_HASH_SALT = 'aliensec-mcp-server:api-key-hash:v1';
+const API_KEY_HASH_ITERATIONS = 120_000;
+const API_KEY_HASH_KEYLEN = 32;
+
 const SCHEMA: Record<number, string[]> = {
   1: [
     // Scan records table
@@ -352,10 +356,15 @@ abstract class BaseRepository<T> {
   }
 
   /**
-   * Generates a SHA-256 hash of a string for secure storage.
+   * Generates a deterministic PBKDF2 hash of a string for secure storage.
+   * PBKDF2 (not a fast unkeyed hash) resists brute-force lookup; the salt is
+   * fixed so equal inputs (e.g. the same API key) always hash identically,
+   * which is required for the `WHERE api_key_hash = ?` lookups that use it.
    */
   protected hashString(value: string): string {
-    return crypto.createHash('sha256').update(value).digest('hex');
+    return crypto
+      .pbkdf2Sync(value, API_KEY_HASH_SALT, API_KEY_HASH_ITERATIONS, API_KEY_HASH_KEYLEN, 'sha256')
+      .toString('hex');
   }
 
   /**
