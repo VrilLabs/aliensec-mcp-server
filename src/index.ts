@@ -366,7 +366,7 @@ function createMcpServer(): McpServer {
       const scanId = crypto.randomBytes(16).toString('hex');
 
       try {
-        logger.info('Starting VirusTotal scan', { scanId, resource, keySlot: apiKeyIndex });
+        logger.info('Starting VirusTotal scan', { scanId, resource, apiKeyIndex });
 
         const virusTotalClient = getVirusTotalClient();
         const result = await virusTotalClient.scan(resource, apiKeyIndex, { wait });
@@ -396,7 +396,7 @@ function createMcpServer(): McpServer {
         );
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
-        logger.error('VirusTotal scan failed', { scanId, resource, keySlot: apiKeyIndex, error: errorMessage });
+        logger.error('VirusTotal scan failed', { scanId, resource, apiKeyIndex, error: errorMessage });
 
         return createToolError(
           `VirusTotal scan failed: ${errorMessage}`,
@@ -431,7 +431,7 @@ function createMcpServer(): McpServer {
       const requestId = crypto.randomBytes(16).toString('hex');
 
       try {
-        logger.info('Getting VirusTotal analysis', { requestId, hash, keySlot: apiKeyIndex });
+        logger.info('Getting VirusTotal analysis', { requestId, hash, apiKeyIndex });
 
         const virusTotalClient = getVirusTotalClient();
         const result = await virusTotalClient.getAnalysis(hash, apiKeyIndex);
@@ -452,7 +452,7 @@ function createMcpServer(): McpServer {
         );
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
-        logger.error('Failed to get VirusTotal analysis', { requestId, hash, keySlot: apiKeyIndex, error: errorMessage });
+        logger.error('Failed to get VirusTotal analysis', { requestId, hash, apiKeyIndex, error: errorMessage });
 
         return createToolError(
           `Failed to get VirusTotal analysis: ${errorMessage}`,
