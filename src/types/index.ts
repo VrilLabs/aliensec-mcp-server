@@ -62,7 +62,9 @@ export interface AppConfig {
 // Scan Types
 // ============================================================================
 
-export type EndpointFlavor = 'pkg' | 'powershell' | 'apt' | 'rpm';
+export const ENDPOINT_FLAVORS = ['pkg', 'powershell', 'apt', 'rpm'] as const;
+
+export type EndpointFlavor = (typeof ENDPOINT_FLAVORS)[number];
 
 export interface ScanRequest {
   /** Target endpoint flavor for scanning */

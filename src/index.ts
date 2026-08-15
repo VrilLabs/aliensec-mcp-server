@@ -24,7 +24,7 @@ import { getConfig, checkRequiredEnv, getMissingEnvError } from './config/index.
 import { getDatabase, resetDatabase } from './database/index.js';
 import { getAlienVaultClient, resetAlienVaultClient, BOOTSTRAP_URLS } from './core/alienVault.js';
 import { getVirusTotalClient, resetVirusTotalClient } from './core/virusTotal.js';
-import { EndpointFlavor, ScanRequest, ToolResult } from './types/index.js';
+import { ENDPOINT_FLAVORS, EndpointFlavor, ScanRequest, ToolResult } from './types/index.js';
 
 // ============================================================================
 // Server Configuration
@@ -189,7 +189,7 @@ function createMcpServer(): McpServer {
         'Scan an endpoint using AlienVault OTX agent. Supports macOS PKG, Windows PowerShell, Debian APT, and Redhat RPM endpoints.',
       inputSchema: z.object({
         flavor: z
-          .enum(['pkg', 'powershell', 'apt', 'rpm'] as const)
+          .enum(ENDPOINT_FLAVORS)
           .describe('Endpoint flavor to scan: pkg (macOS), powershell (Windows), apt (Debian), rpm (Redhat)'),
         target: z.string().optional().describe('Target hostname or IP address to scan'),
         useVirusTotal: z

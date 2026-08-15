@@ -1,5 +1,5 @@
 # CODEOWNERS
-# These owners will be required reviewers for all pull requests.
+# These owners are assigned for review on all pull requests when CODEOWNERS is enabled.
 # See: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
 
 * @VrilLabs

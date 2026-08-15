@@ -8,6 +8,7 @@
 import { describe, it, expect } from 'vitest';
 import * as fc from 'fast-check';
 import {
+  ENDPOINT_FLAVORS,
   AlienSecError,
   AlienVaultAPIError,
   VirusTotalAPIError,
@@ -89,7 +90,7 @@ describe('VirusTotalAPIError – property-based tests', () => {
 describe('DatabaseError – property-based tests', () => {
   it('always has DATABASE_ERROR code and non-retryable', () => {
     fc.assert(
-      fc.property(fc.string(), (message) => {
+      fc.property(fc.string(), message => {
         const err = new DatabaseError(message);
         expect(err.name).toBe('DatabaseError');
         expect(err.code).toBe('DATABASE_ERROR');
@@ -103,7 +104,7 @@ describe('DatabaseError – property-based tests', () => {
 describe('ConfigurationError – property-based tests', () => {
   it('always has CONFIGURATION_ERROR code and statusCode 400', () => {
     fc.assert(
-      fc.property(fc.string(), (message) => {
+      fc.property(fc.string(), message => {
         const err = new ConfigurationError(message);
         expect(err.name).toBe('ConfigurationError');
         expect(err.code).toBe('CONFIGURATION_ERROR');
@@ -119,9 +120,8 @@ describe('ConfigurationError – property-based tests', () => {
 // ============================================================================
 
 describe('EndpointFlavor – property-based tests', () => {
-  const VALID_FLAVORS = new Set(['pkg', 'powershell', 'apt', 'rpm']);
+  const VALID_FLAVORS = new Set(ENDPOINT_FLAVORS);
 
-  /** Mirrors the runtime validation logic used in tool handlers */
   function isValidFlavor(value: string): boolean {
     return VALID_FLAVORS.has(value);
   }
@@ -129,8 +129,8 @@ describe('EndpointFlavor – property-based tests', () => {
   it('rejects arbitrary strings that are not valid flavors', () => {
     fc.assert(
       fc.property(
-        fc.string().filter((s) => !VALID_FLAVORS.has(s)),
-        (s) => {
+        fc.string().filter(s => !VALID_FLAVORS.has(s)),
+        s => {
           expect(isValidFlavor(s)).toBe(false);
         }
       )
@@ -145,12 +145,9 @@ describe('EndpointFlavor – property-based tests', () => {
 
   it('flavor validation is case-sensitive', () => {
     fc.assert(
-      fc.property(
-        fc.constantFrom('PKG', 'POWERSHELL', 'APT', 'RPM', 'Pkg', 'Apt'),
-        (upper) => {
-          expect(isValidFlavor(upper)).toBe(false);
-        }
-      )
+      fc.property(fc.constantFrom('PKG', 'POWERSHELL', 'APT', 'RPM', 'Pkg', 'Apt'), upper => {
+        expect(isValidFlavor(upper)).toBe(false);
+      })
     );
   });
 });
