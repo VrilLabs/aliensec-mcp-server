@@ -33,11 +33,9 @@ import {
 import { AlienVaultConfig, ScanRequest, EndpointFlavor } from '../types';
 import { getConfig } from '../config';
 import { getDatabase, resetDatabase } from '../database';
-import fetch from 'node-fetch';
 
 // Note: Global mocks are already set up in src/test/setup.ts
-// for better-sqlite3-multiple-ciphers, node-fetch, and pino
-// We use vi.mocked() to access the mocked implementations
+// for better-sqlite3-multiple-ciphers, the global fetch API, and pino
 
 // Access the globally mocked fetch
 const mockFetch = vi.mocked(fetch);

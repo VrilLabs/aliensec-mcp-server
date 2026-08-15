@@ -12,11 +12,9 @@ import { beforeAll, afterAll, afterEach, vi } from 'vitest';
 // The database.test.ts, alienVault.test.ts, and virusTotal.test.ts files each define
 // their own MockDatabase class and mock the better-sqlite3-multiple-ciphers module.
 
-// Mock node-fetch globally
+// Mock the global fetch API (Node 22+ native fetch, used directly by source modules)
 const mockFetch = vi.fn();
-vi.mock('node-fetch', () => ({
-  default: mockFetch,
-}));
+vi.stubGlobal('fetch', mockFetch);
 
 // Mock pino logger globally
 const mockLogger = {

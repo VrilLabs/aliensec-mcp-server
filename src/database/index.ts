@@ -17,8 +17,8 @@ import {
   ScanResult,
   EndpointFlavor,
   DatabaseError,
-} from '../types';
-import { getConfig } from '../config';
+} from '../types/index.js';
+import { getConfig } from '../config/index.js';
 
 // ============================================================================
 // Database Schema

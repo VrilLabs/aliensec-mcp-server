@@ -20,11 +20,11 @@ import { serveStdio } from '@modelcontextprotocol/server/stdio';
 import { z } from 'zod';
 import * as crypto from 'crypto';
 import pino from 'pino';
-import { getConfig, checkRequiredEnv, getMissingEnvError } from './config';
-import { getDatabase, resetDatabase } from './database';
-import { getAlienVaultClient, resetAlienVaultClient, BOOTSTRAP_URLS } from './core/alienVault';
-import { getVirusTotalClient, resetVirusTotalClient } from './core/virusTotal';
-import { ScanRequest, ToolResult } from './types';
+import { getConfig, checkRequiredEnv, getMissingEnvError } from './config/index.js';
+import { getDatabase, resetDatabase } from './database/index.js';
+import { getAlienVaultClient, resetAlienVaultClient, BOOTSTRAP_URLS } from './core/alienVault.js';
+import { getVirusTotalClient, resetVirusTotalClient } from './core/virusTotal.js';
+import { EndpointFlavor, ScanRequest, ToolResult } from './types/index.js';
 
 // ============================================================================
 // Server Configuration
@@ -73,25 +73,110 @@ function createMcpServer(): McpServer {
     database.connect();
     logger.info('Database connection established');
   } catch (error) {
-    logger.error('Failed to connect to database', { error });
+    logger.error({ error }, 'Failed to connect to database');
     throw error;
   }
 
   // Create the MCP server
-  const server = new McpServer({
-    name: config.server.name || SERVER_NAME,
-    version: config.server.version || SERVER_VERSION,
-    description: 'AlienVault OTX Endpoint Security Scanning MCP Server with VirusTotal Integration',
-    capabilities: {
-      tools: {},
-      resources: {},
-      prompts: {},
+  const server = new McpServer(
+    {
+      name: config.server.name || SERVER_NAME,
+      version: config.server.version || SERVER_VERSION,
+      description: 'AlienVault OTX Endpoint Security Scanning MCP Server with VirusTotal Integration',
     },
-  });
+    {
+      capabilities: {
+        tools: {},
+        resources: {},
+        prompts: {},
+      },
+    }
+  );
 
   // ======================================================================
   // Register Scan Tools
   // ======================================================================
+
+  /**
+   * Runs an endpoint scan for the given flavor and returns a formatted tool result.
+   * Shared by scan_endpoint and its per-flavor convenience wrappers.
+   */
+  async function scanEndpoint(
+    flavor: EndpointFlavor,
+    target: string | undefined,
+    useVirusTotal: boolean,
+    apiKeyIndex: number
+  ): Promise<ToolResult> {
+    const scanId = crypto.randomBytes(16).toString('hex');
+    const actualTarget = target || 'localhost';
+
+    try {
+      logger.info({ scanId, flavor, target: actualTarget }, 'Starting endpoint scan');
+
+      const alienVaultClient = getAlienVaultClient();
+      const scanRequest: ScanRequest = {
+        flavor,
+        target: actualTarget,
+        options: {
+          useVirusTotal,
+          apiKeyIndex,
+        },
+      };
+
+      const result = await alienVaultClient.scan(scanRequest);
+
+      logger.info(
+        {
+          scanId,
+          flavor,
+          target: actualTarget,
+          status: result.status,
+          threatsDetected: result.threatsDetected,
+          warnings: result.warnings,
+        },
+        'Endpoint scan completed'
+      );
+
+      // Format the response
+      return createToolResult(`Scan ${scanId} completed successfully for ${actualTarget} (${flavor})`, {
+        scanId: result.scanId,
+        timestamp: result.timestamp.toISOString(),
+        flavor: result.flavor,
+        target: result.target,
+        status: result.status,
+        threatsDetected: result.threatsDetected,
+        warnings: result.warnings,
+        findings: result.findings.map(f => ({
+          id: f.id,
+          severity: f.severity,
+          type: f.type,
+          description: f.description,
+          affected: f.affected,
+          iocs: f.iocs,
+          confidence: f.confidence,
+          source: f.source,
+        })),
+        virusTotal: result.virusTotal
+          ? {
+              scanId: result.virusTotal.scanId,
+              positives: result.virusTotal.positives,
+              total: result.virusTotal.total,
+              permalink: result.virusTotal.permalink,
+            }
+          : undefined,
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.error({ scanId, flavor, target: actualTarget, error: errorMessage }, 'Endpoint scan failed');
+
+      return createToolError(`Scan failed: ${errorMessage}`, {
+        scanId,
+        flavor,
+        target: actualTarget,
+        error: errorMessage,
+      });
+    }
+  }
 
   /**
    * Generic scan tool that handles all endpoint flavors.
@@ -121,74 +206,7 @@ function createMcpServer(): McpServer {
           .describe('VirusTotal API key index to use (0-based)'),
       }),
     },
-    async ({ flavor, target, useVirusTotal, apiKeyIndex }) => {
-      const scanId = crypto.randomBytes(16).toString('hex');
-      const actualTarget = target || 'localhost';
-
-      try {
-        logger.info('Starting endpoint scan', { scanId, flavor, target: actualTarget });
-
-        const alienVaultClient = getAlienVaultClient();
-        const scanRequest: ScanRequest = {
-          flavor,
-          target: actualTarget,
-          options: {
-            useVirusTotal,
-            apiKeyIndex,
-          },
-        };
-
-        const result = await alienVaultClient.scan(scanRequest);
-
-        logger.info('Endpoint scan completed', {
-          scanId,
-          flavor,
-          target: actualTarget,
-          status: result.status,
-          threatsDetected: result.threatsDetected,
-          warnings: result.warnings,
-        });
-
-        // Format the response
-        return createToolResult(`Scan ${scanId} completed successfully for ${actualTarget} (${flavor})`, {
-          scanId: result.scanId,
-          timestamp: result.timestamp.toISOString(),
-          flavor: result.flavor,
-          target: result.target,
-          status: result.status,
-          threatsDetected: result.threatsDetected,
-          warnings: result.warnings,
-          findings: result.findings.map(f => ({
-            id: f.id,
-            severity: f.severity,
-            type: f.type,
-            description: f.description,
-            affected: f.affected,
-            iocs: f.iocs,
-            confidence: f.confidence,
-            source: f.source,
-          })),
-          virusTotal: result.virusTotal
-            ? {
-                scanId: result.virusTotal.scanId,
-                positives: result.virusTotal.positives,
-                total: result.virusTotal.total,
-                permalink: result.virusTotal.permalink,
-              }
-            : undefined,
-        });
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        logger.error('Endpoint scan failed', { scanId, flavor, target: actualTarget, error: errorMessage });
-
-        return createToolError(`Scan failed: ${errorMessage}`, {
-          scanId,
-          flavor,
-          target: actualTarget,
-          error: errorMessage,
-        });
-      }
-    }
+    async ({ flavor, target, useVirusTotal, apiKeyIndex }) => scanEndpoint(flavor, target, useVirusTotal, apiKeyIndex)
   );
 
   /**
@@ -204,13 +222,7 @@ function createMcpServer(): McpServer {
         useVirusTotal: z.boolean().optional().default(false).describe('Enable VirusTotal integration'),
       }),
     },
-    async ({ target, useVirusTotal }) => {
-      return server.invokeTool('scan_endpoint', {
-        flavor: 'pkg',
-        target,
-        useVirusTotal,
-      });
-    }
+    async ({ target, useVirusTotal }) => scanEndpoint('pkg', target, useVirusTotal, 0)
   );
 
   /**
@@ -226,13 +238,7 @@ function createMcpServer(): McpServer {
         useVirusTotal: z.boolean().optional().default(false).describe('Enable VirusTotal integration'),
       }),
     },
-    async ({ target, useVirusTotal }) => {
-      return server.invokeTool('scan_endpoint', {
-        flavor: 'powershell',
-        target,
-        useVirusTotal,
-      });
-    }
+    async ({ target, useVirusTotal }) => scanEndpoint('powershell', target, useVirusTotal, 0)
   );
 
   /**
@@ -248,13 +254,7 @@ function createMcpServer(): McpServer {
         useVirusTotal: z.boolean().optional().default(false).describe('Enable VirusTotal integration'),
       }),
     },
-    async ({ target, useVirusTotal }) => {
-      return server.invokeTool('scan_endpoint', {
-        flavor: 'apt',
-        target,
-        useVirusTotal,
-      });
-    }
+    async ({ target, useVirusTotal }) => scanEndpoint('apt', target, useVirusTotal, 0)
   );
 
   /**
@@ -270,13 +270,7 @@ function createMcpServer(): McpServer {
         useVirusTotal: z.boolean().optional().default(false).describe('Enable VirusTotal integration'),
       }),
     },
-    async ({ target, useVirusTotal }) => {
-      return server.invokeTool('scan_endpoint', {
-        flavor: 'rpm',
-        target,
-        useVirusTotal,
-      });
-    }
+    async ({ target, useVirusTotal }) => scanEndpoint('rpm', target, useVirusTotal, 0)
   );
 
   // ======================================================================
@@ -308,17 +302,20 @@ function createMcpServer(): McpServer {
       const scanId = crypto.randomBytes(16).toString('hex');
 
       try {
-        logger.info('Starting VirusTotal scan', { scanId, resource, apiKeyIndex });
+        logger.info({ scanId, resource, apiKeyIndex }, 'Starting VirusTotal scan');
 
         const virusTotalClient = getVirusTotalClient();
         const result = await virusTotalClient.scan(resource, apiKeyIndex, { wait });
 
-        logger.info('VirusTotal scan completed', {
-          scanId,
-          resource,
-          positives: result.positives,
-          total: result.total,
-        });
+        logger.info(
+          {
+            scanId,
+            resource,
+            positives: result.positives,
+            total: result.total,
+          },
+          'VirusTotal scan completed'
+        );
 
         return createToolResult(
           `VirusTotal scan ${result.scanId} completed: ${result.positives}/${result.total} engines detected threats`,
@@ -338,7 +335,7 @@ function createMcpServer(): McpServer {
         );
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
-        logger.error('VirusTotal scan failed', { scanId, resource, apiKeyIndex, error: errorMessage });
+        logger.error({ scanId, resource, apiKeyIndex, error: errorMessage }, 'VirusTotal scan failed');
 
         return createToolError(`VirusTotal scan failed: ${errorMessage}`, {
           scanId,
@@ -367,7 +364,7 @@ function createMcpServer(): McpServer {
       const requestId = crypto.randomBytes(16).toString('hex');
 
       try {
-        logger.info('Getting VirusTotal analysis', { requestId, hash, apiKeyIndex });
+        logger.info({ requestId, hash, apiKeyIndex }, 'Getting VirusTotal analysis');
 
         const virusTotalClient = getVirusTotalClient();
         const result = await virusTotalClient.getAnalysis(hash, apiKeyIndex);
@@ -388,7 +385,7 @@ function createMcpServer(): McpServer {
         );
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
-        logger.error('Failed to get VirusTotal analysis', { requestId, hash, apiKeyIndex, error: errorMessage });
+        logger.error({ requestId, hash, apiKeyIndex, error: errorMessage }, 'Failed to get VirusTotal analysis');
 
         return createToolError(`Failed to get VirusTotal analysis: ${errorMessage}`, {
           requestId,
@@ -474,7 +471,7 @@ function createMcpServer(): McpServer {
       const requestId = crypto.randomBytes(16).toString('hex');
 
       try {
-        logger.info('Searching AlienVault OTX pulses', { requestId, query, limit, offset });
+        logger.info({ requestId, query, limit, offset }, 'Searching AlienVault OTX pulses');
 
         const alienVaultClient = getAlienVaultClient();
         const result = await alienVaultClient.searchPulses(query, limit, offset);
@@ -493,7 +490,7 @@ function createMcpServer(): McpServer {
         });
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
-        logger.error('Failed to search pulses', { requestId, query, limit, offset, error: errorMessage });
+        logger.error({ requestId, query, limit, offset, error: errorMessage }, 'Failed to search pulses');
 
         return createToolError(`Failed to search pulses: ${errorMessage}`, {
           requestId,
@@ -555,12 +552,12 @@ function createMcpServer(): McpServer {
         return createToolResult(
           `Recent Scans (last ${limit})`,
           scans.map(s => ({
-            scanId: s.scan_id,
+            scanId: s.scanId,
             timestamp: s.timestamp,
             flavor: s.flavor,
             target: s.target,
             status: s.status,
-            threatsDetected: s.threats_detected,
+            threatsDetected: s.threatsDetected,
             warnings: s.warnings,
           }))
         );
@@ -724,7 +721,7 @@ async function main(): Promise<void> {
   const missing = checkRequiredEnv();
   if (missing.length > 0) {
     console.error(getMissingEnvError(missing));
-    logger.error('Missing required environment variables', { missing });
+    logger.error({ missing }, 'Missing required environment variables');
     process.exit(1);
   }
 
@@ -734,7 +731,7 @@ async function main(): Promise<void> {
     logger.info('Configuration validated');
   } catch (error) {
     console.error('Configuration error:', error instanceof Error ? error.message : String(error));
-    logger.error('Configuration validation failed', { error });
+    logger.error({ error }, 'Configuration validation failed');
     process.exit(1);
   }
 
@@ -753,14 +750,14 @@ async function main(): Promise<void> {
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (reason, promise) => {
   const logger = createLogger();
-  logger.error('Unhandled Promise Rejection', { reason, promise });
+  logger.error({ reason, promise }, 'Unhandled Promise Rejection');
   console.error('Unhandled Promise Rejection:', reason);
 });
 
 // Handle uncaught exceptions
 process.on('uncaughtException', error => {
   const logger = createLogger();
-  logger.error('Uncaught Exception', { error });
+  logger.error({ error }, 'Uncaught Exception');
   console.error('Uncaught Exception:', error);
   process.exit(1);
 });
@@ -783,7 +780,7 @@ process.on('SIGTERM', () => {
 
     logger.info('Server shutdown complete');
   } catch (error) {
-    logger.error('Error during shutdown', { error });
+    logger.error({ error }, 'Error during shutdown');
   } finally {
     process.exit(0);
   }

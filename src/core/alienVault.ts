@@ -5,7 +5,6 @@
  * Uses osquery-based agents to scan different endpoint types.
  */
 
-import fetch from 'node-fetch';
 import { z } from 'zod';
 import * as crypto from 'crypto';
 import {
@@ -17,9 +16,9 @@ import {
   EndpointFlavor,
   AlienVaultAPIError,
   ConfigurationError,
-} from '../types';
-import { getConfig } from '../config';
-import { getDatabase } from '../database';
+} from '../types/index.js';
+import { getConfig } from '../config/index.js';
+import { getDatabase } from '../database/index.js';
 
 // ============================================================================
 // Bootstrap Script URLs
@@ -75,7 +74,7 @@ const alienVaultEventSchema = z.object({
   destination_ip: z.string().optional(),
   destination_port: z.number().optional(),
   destination_url: z.string().url().optional(),
-  source_ip: z.string().ip().optional(),
+  source_ip: z.union([z.ipv4(), z.ipv6()]).optional(),
   source_country: z.string().optional(),
 });
 
@@ -88,11 +87,9 @@ const alienVaultEventSchema = z.object({
  */
 export class AlienVaultClient {
   private readonly config: AlienVaultConfig;
-  private readonly database;
 
   constructor(config: AlienVaultConfig = getConfig().alienVault) {
     this.config = config;
-    this.database = getDatabase();
   }
 
   /**
@@ -361,7 +358,7 @@ export class AlienVaultClient {
         },
       });
 
-      const data = await response.json();
+      const data = (await response.json()) as { count?: number; pulses?: unknown[] };
 
       return {
         count: data.count || 0,
@@ -394,7 +391,7 @@ export class AlienVaultClient {
         },
       });
 
-      const data = await response.json();
+      const data = (await response.json()) as { events?: unknown[] };
       return (data.events || []).map((event: unknown) => alienVaultEventSchema.parse(event));
     } catch (error) {
       throw new AlienVaultAPIError(
@@ -425,7 +422,9 @@ export class AlienVaultClient {
         },
       });
 
-      const data = await response.json();
+      const data = (await response.json()) as {
+        indicators?: Array<{ type: string; value: string; description?: string }>;
+      };
       return data.indicators || [];
     } catch (error) {
       throw new AlienVaultAPIError(
@@ -449,7 +448,7 @@ export class AlienVaultClient {
     });
 
     if (!response.ok) {
-      const errorData = await this.tryParseError(response);
+      const errorData = (await this.tryParseError(response)) as { error?: { message?: string } } | null;
       throw new Error(errorData?.error?.message || `AlienVault OTX API request failed with status ${response.status}`);
     }
 
