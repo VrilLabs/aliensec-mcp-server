@@ -1,10 +1,10 @@
 /**
  * AlienSec MCP Server - VirusTotal Client Tests
- * 
+ *
  * Tests for VirusTotal API integration, circuit breaker, and rate limiter functionality.
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi, Mock } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 // Mock config and database modules BEFORE any imports that use them
 // This is necessary due to Vitest hoisting behavior
@@ -33,7 +33,7 @@ import {
   DEFAULT_CIRCUIT_BREAKER_CONFIG,
 } from './virusTotal';
 import { VirusTotalConfig, VirusTotalResult, VirusTotalAPIError } from '../types';
-import { getConfig, createConfig } from '../config';
+import { getConfig } from '../config';
 import { getDatabase, resetDatabase } from '../database';
 import fetch from 'node-fetch';
 
@@ -117,12 +117,12 @@ describe('VirusTotal Module', () => {
           // Force the circuit to be open with a past timeout
           const pastDate = new Date(Date.now() - 10000); // 10 seconds ago
           circuitBreaker.recordFailure(0, true);
-          
+
           // Manually set the state to open with past timeout
           const state = circuitBreaker.getState(0);
           state.isOpen = true;
           state.timeoutUntil = pastDate;
-          
+
           const canExecute = circuitBreaker.canExecute(0);
           expect(canExecute).toBe(true);
         });
@@ -132,7 +132,7 @@ describe('VirusTotal Module', () => {
           for (let i = 0; i < 5; i++) {
             circuitBreaker.recordFailure(0);
           }
-          
+
           const canExecute = circuitBreaker.canExecute(0);
           expect(canExecute).toBe(false);
         });
@@ -152,20 +152,20 @@ describe('VirusTotal Module', () => {
             resetTimeoutSeconds: 0, // Immediate timeout for testing
             halfOpenTestCount: 2,
           });
-          
+
           // Open the circuit
           for (let i = 0; i < 3; i++) {
             cb.recordFailure(0);
           }
-          
+
           // Transition to half-open by calling canExecute (which checks timeout)
           // Since resetTimeoutSeconds is 0, the timeout is immediate
           cb.canExecute(0);
-          
+
           // Record successes in half-open state to close the circuit
           cb.recordSuccess(0);
           cb.recordSuccess(0);
-          
+
           const state = cb.getState(0);
           expect(state.successCount).toBe(0);
           expect(state.failureCount).toBe(0);
@@ -186,12 +186,12 @@ describe('VirusTotal Module', () => {
             resetTimeoutSeconds: 60,
             halfOpenTestCount: 1,
           });
-          
+
           // Record failures up to threshold
           for (let i = 0; i < 3; i++) {
             cb.recordFailure(0);
           }
-          
+
           const state = cb.getState(0);
           expect(state.isOpen).toBe(true);
           expect(state.timeoutUntil).toBeDefined();
@@ -208,7 +208,7 @@ describe('VirusTotal Module', () => {
         it('should reset state for specific API key', () => {
           circuitBreaker.recordFailure(0);
           circuitBreaker.reset(0);
-          
+
           const state = circuitBreaker.getState(0);
           expect(state.isOpen).toBe(false);
           expect(state.failureCount).toBe(0);
@@ -218,7 +218,7 @@ describe('VirusTotal Module', () => {
           circuitBreaker.recordFailure(0);
           circuitBreaker.recordFailure(1);
           circuitBreaker.reset(0);
-          
+
           const state0 = circuitBreaker.getState(0);
           const state1 = circuitBreaker.getState(1);
           expect(state0.failureCount).toBe(0);
@@ -231,9 +231,9 @@ describe('VirusTotal Module', () => {
           circuitBreaker.recordFailure(0);
           circuitBreaker.recordFailure(1);
           circuitBreaker.recordSuccess(0);
-          
+
           circuitBreaker.resetAll();
-          
+
           const state0 = circuitBreaker.getState(0);
           const state1 = circuitBreaker.getState(1);
           expect(state0.failureCount).toBe(0);
@@ -245,7 +245,7 @@ describe('VirusTotal Module', () => {
         it('should return all current states', () => {
           circuitBreaker.recordFailure(0);
           circuitBreaker.recordSuccess(1);
-          
+
           const allStates = circuitBreaker.getAllStates();
           expect(allStates.size).toBeGreaterThan(0);
         });
@@ -292,7 +292,7 @@ describe('VirusTotal Module', () => {
         for (let i = 0; i < 4; i++) {
           rateLimiter.recordRequest(0);
         }
-        
+
         await expect(rateLimiter.wait(0, false)).rejects.toThrow();
       });
     });
@@ -385,7 +385,7 @@ describe('VirusTotal Module', () => {
         for (let i = 0; i < 5; i++) {
           circuitBreaker.recordFailure(0, true);
         }
-        
+
         await expect(client.scan('test-hash', 0)).rejects.toThrow('blocked by circuit breaker');
       });
 
@@ -395,7 +395,7 @@ describe('VirusTotal Module', () => {
         for (let i = 0; i < 4; i++) {
           rateLimiter.recordRequest(0);
         }
-        
+
         await expect(client.scan('test-hash', 0, { wait: false })).rejects.toThrow('Rate limit exceeded');
       });
 
@@ -405,7 +405,7 @@ describe('VirusTotal Module', () => {
         for (let i = 0; i < dailyLimit; i++) {
           (client as any).recordDailyRequest(0);
         }
-        
+
         await expect(client.scan('test-hash', 0)).rejects.toThrow('Daily limit');
       });
 
@@ -424,7 +424,7 @@ describe('VirusTotal Module', () => {
                 timeout: 0,
               },
               last_analysis_results: {
-                'Kaspersky': {
+                Kaspersky: {
                   category: 'malicious',
                   engine_name: 'Kaspersky',
                   engine_version: '1.0',
@@ -443,7 +443,7 @@ describe('VirusTotal Module', () => {
         } as Response);
 
         const result = await client.scan('test-hash', 0);
-        
+
         expect(result).toBeDefined();
         expect(result.scanId).toBe('test-scan-id');
         expect(result.apiKeyIndex).toBe(0);
@@ -475,7 +475,7 @@ describe('VirusTotal Module', () => {
         } catch {
           // Expected to fail
         }
-        
+
         const circuitBreaker = (client as any).circuitBreaker;
         const state = circuitBreaker.getState(0);
         expect(state.isOpen).toBe(true);
@@ -488,7 +488,7 @@ describe('VirusTotal Module', () => {
         for (let i = 0; i < 5; i++) {
           circuitBreaker.recordFailure(0, true);
         }
-        
+
         await expect(client.getAnalysis('test-hash', 0)).rejects.toThrow('blocked by circuit breaker');
       });
 
@@ -507,7 +507,7 @@ describe('VirusTotal Module', () => {
                 timeout: 0,
               },
               last_analysis_results: {
-                'Kaspersky': {
+                Kaspersky: {
                   category: 'malicious',
                   engine_name: 'Kaspersky',
                   result: 'Trojan.Generic',
@@ -524,7 +524,7 @@ describe('VirusTotal Module', () => {
         } as Response);
 
         const result = await client.getAnalysis('test-hash', 0);
-        
+
         expect(result).toBeDefined();
         expect(result.scanId).toBe('test-analysis-id');
         expect(result.positives).toBe(3);
@@ -573,12 +573,12 @@ describe('VirusTotal Module', () => {
 
       it('should check daily limit correctly', () => {
         const dailyLimit = testConfig.dailyLimit;
-        
+
         // Record requests up to the limit
         for (let i = 0; i < dailyLimit; i++) {
           (client as any).recordDailyRequest(0);
         }
-        
+
         expect(() => (client as any).checkDailyLimit(0)).toThrow('Daily limit');
       });
 
@@ -587,7 +587,7 @@ describe('VirusTotal Module', () => {
         for (let i = 0; i < 10; i++) {
           (client as any).recordDailyRequest(0);
         }
-        
+
         expect(() => (client as any).checkDailyLimit(0)).not.toThrow();
       });
     });
@@ -615,7 +615,7 @@ describe('VirusTotal Module', () => {
         positives: 2,
         total: 70,
         results: {
-          'Kaspersky': {
+          Kaspersky: {
             engine: 'Kaspersky',
             name: 'Trojan.Generic',
             category: 'malicious',

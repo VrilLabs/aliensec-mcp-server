@@ -1,6 +1,6 @@
 /**
  * AlienSec MCP Server - AlienVault Client Tests
- * 
+ *
  * Tests for AlienVault OTX API client functionality.
  */
 
@@ -60,7 +60,13 @@ describe('AlienVault Module', () => {
     vi.mocked(getConfig).mockReturnValue({
       alienVault: testConfig,
       server: { name: 'test', version: '1.0', debug: false, logLevel: 'info' },
-      virusTotal: { apiKeys: [], baseUrl: 'https://api.virustotal.com', rateLimitPerMinute: 4, dailyLimit: 500, circuitBreakerTimeout: 300 },
+      virusTotal: {
+        apiKeys: [],
+        baseUrl: 'https://api.virustotal.com',
+        rateLimitPerMinute: 4,
+        dailyLimit: 500,
+        circuitBreakerTimeout: 300,
+      },
       database: { path: ':memory:', timeout: 5000 },
     } as any);
 
@@ -91,7 +97,7 @@ describe('AlienVault Module', () => {
     });
 
     it('should use the correct base URL', () => {
-      Object.values(BOOTSTRAP_URLS).forEach((url) => {
+      Object.values(BOOTSTRAP_URLS).forEach(url => {
         expect(url).toContain('api.agent.otxb.io');
       });
     });
@@ -139,8 +145,9 @@ describe('AlienVault Module', () => {
       });
 
       it('should throw error for unknown flavor', () => {
-        expect(() => client.getBootstrapCommand('unknown' as EndpointFlavor))
-          .toThrow('Unknown endpoint flavor: unknown');
+        expect(() => client.getBootstrapCommand('unknown' as EndpointFlavor)).toThrow(
+          'Unknown endpoint flavor: unknown'
+        );
       });
     });
   });
@@ -197,7 +204,7 @@ describe('AlienVault Module', () => {
 
     beforeEach(() => {
       client = new AlienVaultClient(testConfig);
-      
+
       // Mock the saveScanResult method
       const mockDb = {
         getScanRepository: () => ({

@@ -1,6 +1,6 @@
 /**
  * AlienSec MCP Server - Database Module
- * 
+ *
  * SQLite database layer with optional encryption support using better-sqlite3-multiple-ciphers.
  * Provides repositories for scan records, circuit breaker events, and API logs.
  */
@@ -15,8 +15,6 @@ import {
   DatabaseCircuitBreakerRecord,
   DatabaseAPILogRecord,
   ScanResult,
-  ScanFinding,
-  VirusTotalResult,
   EndpointFlavor,
   DatabaseError,
 } from '../types';
@@ -219,9 +217,8 @@ export class AlienSecDatabase {
     }
 
     try {
-      const result = this.db
-        .prepare('SELECT version FROM schema_version LIMIT 1')
-        .get() as { version: number } | undefined;
+      const result = this.db.prepare('SELECT version FROM schema_version LIMIT 1').get() as
+        { version: number } | undefined;
       return result?.version ?? 0;
     } catch {
       return 0;
@@ -236,9 +233,7 @@ export class AlienSecDatabase {
       throw new DatabaseError('Database connection not established');
     }
 
-    this.db
-      .prepare('INSERT OR REPLACE INTO schema_version (version) VALUES (?)')
-      .run(version);
+    this.db.prepare('INSERT OR REPLACE INTO schema_version (version) VALUES (?)').run(version);
   }
 
   /**
@@ -398,31 +393,29 @@ export class ScanRepository extends BaseRepository<DatabaseScanRecord> {
 
     // Serialize findings and VirusTotal result to JSON
     const findingsJson = JSON.stringify(scanResult.findings || []);
-    const virusTotalJson = scanResult.virusTotal
-      ? JSON.stringify(scanResult.virusTotal)
-      : undefined;
+    const virusTotalJson = scanResult.virusTotal ? JSON.stringify(scanResult.virusTotal) : undefined;
 
-    const result = db
-      .prepare(`
+    db.prepare(
+      `
         INSERT INTO scan_records (
           scan_id, timestamp, flavor, target, status,
           threats_detected, warnings, findings_json, virus_total_json,
           raw_output, error, created_at, updated_at
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
-      `)
-      .run(
-        scanResult.scanId,
-        scanResult.timestamp.toISOString(),
-        scanResult.flavor,
-        scanResult.target,
-        scanResult.status,
-        scanResult.threatsDetected,
-        scanResult.warnings,
-        findingsJson,
-        virusTotalJson,
-        scanResult.rawOutput,
-        scanResult.error
-      );
+      `
+    ).run(
+      scanResult.scanId,
+      scanResult.timestamp.toISOString(),
+      scanResult.flavor,
+      scanResult.target,
+      scanResult.status,
+      scanResult.threatsDetected,
+      scanResult.warnings,
+      findingsJson,
+      virusTotalJson,
+      scanResult.rawOutput,
+      scanResult.error
+    );
 
     return this.getScanById(scanResult.scanId)!;
   }
@@ -431,40 +424,28 @@ export class ScanRepository extends BaseRepository<DatabaseScanRecord> {
    * Gets a scan record by ID.
    */
   getScanById(scanId: string): DatabaseScanRecord | undefined {
-    return this.get(
-      'SELECT * FROM scan_records WHERE scan_id = ?',
-      [scanId]
-    );
+    return this.get('SELECT * FROM scan_records WHERE scan_id = ?', [scanId]);
   }
 
   /**
    * Gets scan records by flavor.
    */
   getScansByFlavor(flavor: EndpointFlavor, limit: number = 100): DatabaseScanRecord[] {
-    return this.all(
-      'SELECT * FROM scan_records WHERE flavor = ? ORDER BY timestamp DESC LIMIT ?',
-      [flavor, limit]
-    );
+    return this.all('SELECT * FROM scan_records WHERE flavor = ? ORDER BY timestamp DESC LIMIT ?', [flavor, limit]);
   }
 
   /**
    * Gets recent scan records.
    */
   getRecentScans(limit: number = 100): DatabaseScanRecord[] {
-    return this.all(
-      'SELECT * FROM scan_records ORDER BY timestamp DESC LIMIT ?',
-      [limit]
-    );
+    return this.all('SELECT * FROM scan_records ORDER BY timestamp DESC LIMIT ?', [limit]);
   }
 
   /**
    * Gets scan records by status.
    */
   getScansByStatus(status: string, limit: number = 100): DatabaseScanRecord[] {
-    return this.all(
-      'SELECT * FROM scan_records WHERE status = ? ORDER BY timestamp DESC LIMIT ?',
-      [status, limit]
-    );
+    return this.all('SELECT * FROM scan_records WHERE status = ? ORDER BY timestamp DESC LIMIT ?', [status, limit]);
   }
 
   /**
@@ -479,9 +460,7 @@ export class ScanRepository extends BaseRepository<DatabaseScanRecord> {
   } {
     const db = this.getDatabase();
 
-    const total = db
-      .prepare('SELECT COUNT(*) as count FROM scan_records')
-      .get() as { count: number };
+    const total = db.prepare('SELECT COUNT(*) as count FROM scan_records').get() as { count: number };
 
     const byFlavor: Record<EndpointFlavor, number> = {
       pkg: 0,
@@ -490,9 +469,10 @@ export class ScanRepository extends BaseRepository<DatabaseScanRecord> {
       rpm: 0,
     };
 
-    const flavors = db
-      .prepare('SELECT flavor, COUNT(*) as count FROM scan_records GROUP BY flavor')
-      .all() as Array<{ flavor: EndpointFlavor; count: number }>;
+    const flavors = db.prepare('SELECT flavor, COUNT(*) as count FROM scan_records GROUP BY flavor').all() as Array<{
+      flavor: EndpointFlavor;
+      count: number;
+    }>;
 
     for (const { flavor, count } of flavors) {
       if (flavor in byFlavor) {
@@ -501,21 +481,20 @@ export class ScanRepository extends BaseRepository<DatabaseScanRecord> {
     }
 
     const byStatus: Record<string, number> = {};
-    const statuses = db
-      .prepare('SELECT status, COUNT(*) as count FROM scan_records GROUP BY status')
-      .all() as Array<{ status: string; count: number }>;
+    const statuses = db.prepare('SELECT status, COUNT(*) as count FROM scan_records GROUP BY status').all() as Array<{
+      status: string;
+      count: number;
+    }>;
 
     for (const { status, count } of statuses) {
       byStatus[status] = count;
     }
 
-    const threats = db
-      .prepare('SELECT SUM(threats_detected) as count FROM scan_records')
-      .get() as { count: number | null };
+    const threats = db.prepare('SELECT SUM(threats_detected) as count FROM scan_records').get() as {
+      count: number | null;
+    };
 
-    const warnings = db
-      .prepare('SELECT SUM(warnings) as count FROM scan_records')
-      .get() as { count: number | null };
+    const warnings = db.prepare('SELECT SUM(warnings) as count FROM scan_records').get() as { count: number | null };
 
     return {
       total: total.count,
@@ -562,21 +541,15 @@ export class CircuitBreakerRepository extends BaseRepository<DatabaseCircuitBrea
     const timeoutUntil = new Date(Date.now() + timeoutSeconds * 1000).toISOString();
 
     const result = db
-      .prepare(`
+      .prepare(
+        `
         INSERT INTO circuit_breaker_events (
           api_key_index, api_key_hash, event_type,
           event_timestamp, timeout_until, timeout_seconds, error_message, created_at
         ) VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
-      `)
-      .run(
-        apiKeyIndex,
-        apiKeyHash,
-        eventType,
-        now,
-        timeoutUntil,
-        timeoutSeconds,
-        errorMessage
-      );
+      `
+      )
+      .run(apiKeyIndex, apiKeyHash, eventType, now, timeoutUntil, timeoutSeconds, errorMessage);
 
     return this.getEventById(result.lastInsertRowid as number)!;
   }
@@ -634,9 +607,7 @@ export class CircuitBreakerRepository extends BaseRepository<DatabaseCircuitBrea
   clearExpiredEvents(): number {
     const db = this.getDatabase();
     const now = this.getTimestamp();
-    const result = db
-      .prepare('DELETE FROM circuit_breaker_events WHERE timeout_until <= ?')
-      .run(now);
+    const result = db.prepare('DELETE FROM circuit_breaker_events WHERE timeout_until <= ?').run(now);
     return result.changes || 0;
   }
 
@@ -652,9 +623,7 @@ export class CircuitBreakerRepository extends BaseRepository<DatabaseCircuitBrea
     const db = this.getDatabase();
     const now = this.getTimestamp();
 
-    const total = db
-      .prepare('SELECT COUNT(*) as count FROM circuit_breaker_events')
-      .get() as { count: number };
+    const total = db.prepare('SELECT COUNT(*) as count FROM circuit_breaker_events').get() as { count: number };
 
     const open = db
       .prepare('SELECT COUNT(*) as count FROM circuit_breaker_events WHERE timeout_until > ?')
@@ -713,24 +682,16 @@ export class APILogRepository extends BaseRepository<DatabaseAPILogRecord> {
     const now = this.getTimestamp();
 
     const result = db
-      .prepare(`
+      .prepare(
+        `
         INSERT INTO api_logs (
           api_key_index, api_key_hash, request_type,
           request_timestamp, response_status, response_time_ms,
           success, error_message, endpoint, created_at
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
-      `)
-      .run(
-        apiKeyIndex,
-        apiKeyHash,
-        requestType,
-        now,
-        responseStatus,
-        responseTimeMs,
-        success,
-        errorMessage,
-        endpoint
-      );
+      `
+      )
+      .run(apiKeyIndex, apiKeyHash, requestType, now, responseStatus, responseTimeMs, success, errorMessage, endpoint);
 
     return this.getLogById(result.lastInsertRowid as number)!;
   }
@@ -746,20 +707,17 @@ export class APILogRepository extends BaseRepository<DatabaseAPILogRecord> {
    * Gets recent API logs for a specific API key.
    */
   getRecentLogs(apiKeyIndex: number, limit: number = 100): DatabaseAPILogRecord[] {
-    return this.all(
-      'SELECT * FROM api_logs WHERE api_key_index = ? ORDER BY request_timestamp DESC LIMIT ?',
-      [apiKeyIndex, limit]
-    );
+    return this.all('SELECT * FROM api_logs WHERE api_key_index = ? ORDER BY request_timestamp DESC LIMIT ?', [
+      apiKeyIndex,
+      limit,
+    ]);
   }
 
   /**
    * Gets failed API requests.
    */
   getFailedRequests(limit: number = 100): DatabaseAPILogRecord[] {
-    return this.all(
-      'SELECT * FROM api_logs WHERE success = 0 ORDER BY request_timestamp DESC LIMIT ?',
-      [limit]
-    );
+    return this.all('SELECT * FROM api_logs WHERE success = 0 ORDER BY request_timestamp DESC LIMIT ?', [limit]);
   }
 
   /**
@@ -787,21 +745,17 @@ export class APILogRepository extends BaseRepository<DatabaseAPILogRecord> {
   } {
     const db = this.getDatabase();
 
-    const total = db
-      .prepare('SELECT COUNT(*) as count FROM api_logs')
-      .get() as { count: number };
+    const total = db.prepare('SELECT COUNT(*) as count FROM api_logs').get() as { count: number };
 
-    const successful = db
-      .prepare('SELECT COUNT(*) as count FROM api_logs WHERE success = 1')
-      .get() as { count: number };
+    const successful = db.prepare('SELECT COUNT(*) as count FROM api_logs WHERE success = 1').get() as {
+      count: number;
+    };
 
-    const failed = db
-      .prepare('SELECT COUNT(*) as count FROM api_logs WHERE success = 0')
-      .get() as { count: number };
+    const failed = db.prepare('SELECT COUNT(*) as count FROM api_logs WHERE success = 0').get() as { count: number };
 
-    const avgResponseTime = db
-      .prepare('SELECT AVG(response_time_ms) as avg FROM api_logs')
-      .get() as { avg: number | null };
+    const avgResponseTime = db.prepare('SELECT AVG(response_time_ms) as avg FROM api_logs').get() as {
+      avg: number | null;
+    };
 
     const byRequestType: Record<string, number> = {};
     const requestTypes = db
@@ -881,7 +835,4 @@ export function createDatabase(config: DatabaseConfig): AlienSecDatabase {
 // Export
 // ============================================================================
 
-export {
-  SCHEMA_VERSION,
-  SCHEMA,
-};
+export { SCHEMA_VERSION, SCHEMA };

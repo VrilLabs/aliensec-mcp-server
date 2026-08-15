@@ -1,6 +1,6 @@
 /**
  * AlienSec MCP Server - Main Entry Point Tests
- * 
+ *
  * FIXED: All mock objects are defined INSIDE vi.mock() factory functions
  * to avoid Vitest hoisting issues where vi.mock() is hoisted above variable definitions.
  */
@@ -41,7 +41,13 @@ vi.mock('./config', () => ({
   createConfig: vi.fn(() => ({
     server: { name: 'test-aliensec-mcp-server', version: '1.0.0', debug: false, logLevel: 'info' },
     alienVault: { apiKey: 'test-av-key', baseUrl: 'https://api.agent.otxb.io', defaultRegion: 'us-east-1' },
-    virusTotal: { apiKeys: ['test-vt-key-1'], baseUrl: 'https://www.virustotal.com/api/v3', rateLimitPerMinute: 4, dailyLimit: 500, circuitBreakerTimeout: 300 },
+    virusTotal: {
+      apiKeys: ['test-vt-key-1'],
+      baseUrl: 'https://www.virustotal.com/api/v3',
+      rateLimitPerMinute: 4,
+      dailyLimit: 500,
+      circuitBreakerTimeout: 300,
+    },
     database: { path: ':memory:', encryptionKey: undefined, timeout: 5000 },
   })),
   checkRequiredEnv: vi.fn(() => []),
@@ -60,8 +66,15 @@ vi.mock('./database', () => {
       warnings: 0,
     }),
     getRecentScans: vi.fn().mockReturnValue([
-      { scan_id: 'scan-1', timestamp: '2024-01-01T00:00:00Z', flavor: 'pkg',
-        target: 'localhost', status: 'success', threats_detected: 2, warnings: 0 },
+      {
+        scan_id: 'scan-1',
+        timestamp: '2024-01-01T00:00:00Z',
+        flavor: 'pkg',
+        target: 'localhost',
+        status: 'success',
+        threats_detected: 2,
+        warnings: 0,
+      },
     ]),
     getScanById: vi.fn(),
     saveScan: vi.fn(),
@@ -69,7 +82,8 @@ vi.mock('./database', () => {
 
   const mockCircuitBreakerRepository = {
     getCircuitBreakerStats: vi.fn().mockReturnValue({
-      totalEvents: 5, openEvents: 1,
+      totalEvents: 5,
+      openEvents: 1,
       byEventType: { rate_limit: 3, error: 2 },
       byApiKeyIndex: { 0: 3, 1: 2 },
     }),
@@ -79,7 +93,9 @@ vi.mock('./database', () => {
 
   const mockAPILogRepository = {
     getApiStats: vi.fn().mockReturnValue({
-      totalRequests: 100, successfulRequests: 95, failedRequests: 5,
+      totalRequests: 100,
+      successfulRequests: 95,
+      failedRequests: 5,
       avgResponseTimeMs: 300,
       byRequestType: { scan: 60, lookup: 30, report: 10 },
       byApiKeyIndex: { 0: 50, 1: 40, 2: 10 },
@@ -111,7 +127,7 @@ vi.mock('./database', () => {
 vi.mock('./core/alienVault', () => {
   const mockAlienVaultClient = {
     scan: vi.fn().mockResolvedValue({}),
-    getBootstrapCommand: vi.fn((flavor: string, target?: string) => 'bootstrap-command'),
+    getBootstrapCommand: vi.fn((_flavor: string, _target?: string) => 'bootstrap-command'),
     searchPulses: vi.fn().mockResolvedValue([]),
     validateApiKey: vi.fn().mockResolvedValue(true),
     getPulse: vi.fn().mockResolvedValue({}),
@@ -136,16 +152,28 @@ vi.mock('./core/alienVault', () => {
 vi.mock('./core/virusTotal', () => {
   const mockVirusTotalClient = {
     scan: vi.fn().mockResolvedValue({
-      scanId: 'vt-test-scan-id', apiKeyIndex: 0, timestamp: new Date(),
-      positives: 2, total: 70, results: {}, permalink: 'https://www.virustotal.com/gui/file/vt-test-scan-id',
+      scanId: 'vt-test-scan-id',
+      apiKeyIndex: 0,
+      timestamp: new Date(),
+      positives: 2,
+      total: 70,
+      results: {},
+      permalink: 'https://www.virustotal.com/gui/file/vt-test-scan-id',
     }),
     analyze: vi.fn().mockResolvedValue({
-      scanId: 'vt-test-analysis-id', apiKeyIndex: 0, timestamp: new Date(),
-      positives: 3, total: 70, results: {}, permalink: 'https://www.virustotal.com/gui/file/vt-test-analysis-id',
+      scanId: 'vt-test-analysis-id',
+      apiKeyIndex: 0,
+      timestamp: new Date(),
+      positives: 3,
+      total: 70,
+      results: {},
+      permalink: 'https://www.virustotal.com/gui/file/vt-test-analysis-id',
     }),
     getQuota: vi.fn().mockResolvedValue({ remaining: 100, limit: 500 }),
     getAnalysis: vi.fn().mockResolvedValue({
-      scanId: 'vt-test-analysis-id', positives: 2, total: 70,
+      scanId: 'vt-test-analysis-id',
+      positives: 2,
+      total: 70,
       results: { Kaspersky: { category: 'malicious', name: 'Trojan.Generic', confidence: 95, raw: {} } },
       permalink: 'https://www.virustotal.com/gui/file/vt-test-analysis-id',
     }),
@@ -167,8 +195,12 @@ vi.mock('./core/virusTotal', () => {
 // Pino mock
 vi.mock('pino', () => {
   const mockLogger = {
-    info: vi.fn(), error: vi.fn(), warn: vi.fn(),
-    debug: vi.fn(), trace: vi.fn(), fatal: vi.fn(),
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn(),
+    trace: vi.fn(),
+    fatal: vi.fn(),
   };
   return { default: vi.fn(() => mockLogger) };
 });
@@ -214,14 +246,8 @@ import * as databaseModule from './database';
 import * as alienVaultModule from './core/alienVault';
 import * as virusTotalModule from './core/virusTotal';
 
+import { createMcpServer, createLogger, createToolResult, createToolError } from './index';
 import {
-  createMcpServer,
-  createLogger,
-  createToolResult,
-  createToolError,
-} from './index';
-import {
-  EndpointFlavor,
   ScanRequest,
   ScanResult,
   VirusTotalResult,
@@ -323,33 +349,25 @@ describe('MCP Server Main Entry Point', () => {
     });
 
     it('should handle AlienVaultAPIError', () => {
-      const error = createToolError(
-        new AlienVaultAPIError('API Error', 500, 'Internal Server Error')
-      );
+      const error = createToolError(new AlienVaultAPIError('API Error', 500, 'Internal Server Error'));
       expect(error).toBeDefined();
       expect(error.isError).toBe(true);
     });
 
     it('should handle VirusTotalAPIError', () => {
-      const error = createToolError(
-        new VirusTotalAPIError('Rate limit exceeded', 429, 'Too Many Requests')
-      );
+      const error = createToolError(new VirusTotalAPIError('Rate limit exceeded', 429, 'Too Many Requests'));
       expect(error).toBeDefined();
       expect(error.isError).toBe(true);
     });
 
     it('should handle DatabaseError', () => {
-      const error = createToolError(
-        new DatabaseError('Database connection failed', new Error('Connection timeout'))
-      );
+      const error = createToolError(new DatabaseError('Database connection failed', new Error('Connection timeout')));
       expect(error).toBeDefined();
       expect(error.isError).toBe(true);
     });
 
     it('should handle ConfigurationError', () => {
-      const error = createToolError(
-        new ConfigurationError('Invalid configuration: MISSING_API_KEY')
-      );
+      const error = createToolError(new ConfigurationError('Invalid configuration: MISSING_API_KEY'));
       expect(error).toBeDefined();
       expect(error.isError).toBe(true);
     });

@@ -1,6 +1,6 @@
 /**
  * AlienSec MCP Server - AlienVault OTX Integration Module
- * 
+ *
  * Provides AlienVault OTX endpoint scanning capabilities.
  * Uses osquery-based agents to scan different endpoint types.
  */
@@ -13,6 +13,7 @@ import {
   ScanRequest,
   ScanResult,
   ScanFinding,
+  VirusTotalResult,
   EndpointFlavor,
   AlienVaultAPIError,
   ConfigurationError,
@@ -41,13 +42,15 @@ const alienVaultPulseSchema = z.object({
   description: z.string().optional(),
   reference: z.string().url().optional(),
   tags: z.array(z.string()).optional(),
-  indicators: z.array(
-    z.object({
-      type: z.string(),
-      value: z.string(),
-      description: z.string().optional(),
-    })
-  ).optional(),
+  indicators: z
+    .array(
+      z.object({
+        type: z.string(),
+        value: z.string(),
+        description: z.string().optional(),
+      })
+    )
+    .optional(),
   malware_families: z.array(z.string()).optional(),
   adversaries: z.array(z.string()).optional(),
   target_countries: z.array(z.string()).optional(),
@@ -74,27 +77,6 @@ const alienVaultEventSchema = z.object({
   destination_url: z.string().url().optional(),
   source_ip: z.string().ip().optional(),
   source_country: z.string().optional(),
-});
-
-const alienVaultScanResultSchema = z.object({
-  query_name: z.string(),
-  query: z.string(),
-  results: z.array(
-    z.object({
-      host: z.string(),
-      path: z.string(),
-      value: z.string(),
-      time: z.number(),
-    })
-  ),
-  matches: z.array(
-    z.object({
-      pulse: alienVaultPulseSchema,
-      event: alienVaultEventSchema,
-      match_type: z.string(),
-      match_value: z.string(),
-    })
-  ),
 });
 
 // ============================================================================
@@ -124,21 +106,21 @@ export class AlienVaultClient {
 
     const apiKeyParam = `API_KEY=${this.config.apiKey}`;
     const targetParam = target ? `TARGET=${target}` : '';
-    
+
     // Generate the appropriate command based on the flavor
     switch (flavor) {
       case 'pkg':
         return `${apiKeyParam} ${targetParam} bash -c "$(curl -s ${url})"`;
-      
+
       case 'powershell':
         return `[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12; ${apiKeyParam} (new-object Net.WebClient).DownloadString("${url}") | iex; install_agent -apikey ${this.config.apiKey}${target ? ` -target ${target}` : ''}`;
-      
+
       case 'apt':
         return `${apiKeyParam} ${targetParam} bash -c "$(curl -s ${url})"`;
-      
+
       case 'rpm':
         return `${apiKeyParam} ${targetParam} bash -c "$(curl -s ${url})"`;
-      
+
       default:
         throw new ConfigurationError(`Unsupported endpoint flavor: ${flavor}`);
     }
@@ -155,17 +137,12 @@ export class AlienVaultClient {
     const target = request.target || 'localhost';
 
     try {
-      // Generate the bootstrap command
-      const command = this.getBootstrapCommand(request.flavor, request.target);
+      // Generate the bootstrap command (also validates the flavor has a bootstrap URL)
+      this.getBootstrapCommand(request.flavor, request.target);
 
       // In a real implementation, this would execute the command on the target
       // For now, we'll simulate a scan with some sample findings
-      const scanResult = await this.simulateScan(
-        scanId,
-        request.flavor,
-        target,
-        request.options
-      );
+      const scanResult = await this.simulateScan(scanId, request.flavor, target, request.options);
 
       // Save to database
       const db = getDatabase();
@@ -212,21 +189,17 @@ export class AlienVaultClient {
     options?: { customQuery?: string; useVirusTotal?: boolean }
   ): Promise<ScanResult> {
     // Simulate scan execution delay
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    await new Promise(resolve => setTimeout(resolve, 100));
 
     // Generate sample findings based on the target
     const findings = this.generateSampleFindings(flavor, target);
 
     // Count threats and warnings
-    const threatsDetected = findings.filter(
-      (f) => f.severity === 'critical' || f.severity === 'high'
-    ).length;
-    const warnings = findings.filter(
-      (f) => f.severity === 'medium' || f.severity === 'low'
-    ).length;
+    const threatsDetected = findings.filter(f => f.severity === 'critical' || f.severity === 'high').length;
+    const warnings = findings.filter(f => f.severity === 'medium' || f.severity === 'low').length;
 
     // Add VirusTotal results if requested
-    let virusTotal: any = undefined;
+    let virusTotal: VirusTotalResult | undefined = undefined;
     if (options?.useVirusTotal) {
       virusTotal = await this.simulateVirusTotalScan(target);
     }
@@ -241,18 +214,22 @@ export class AlienVaultClient {
       warnings,
       findings,
       virusTotal,
-      rawOutput: JSON.stringify({
-        scanId,
-        flavor,
-        target,
-        timestamp: new Date().toISOString(),
-        findings: findings.map((f) => ({
-          id: f.id,
-          severity: f.severity,
-          type: f.type,
-          description: f.description,
-        })),
-      }, null, 2),
+      rawOutput: JSON.stringify(
+        {
+          scanId,
+          flavor,
+          target,
+          timestamp: new Date().toISOString(),
+          findings: findings.map(f => ({
+            id: f.id,
+            severity: f.severity,
+            type: f.type,
+            description: f.description,
+          })),
+        },
+        null,
+        2
+      ),
     };
   }
 
@@ -307,9 +284,9 @@ export class AlienVaultClient {
   /**
    * Simulates a VirusTotal scan for demonstration purposes.
    */
-  private async simulateVirusTotalScan(resource: string): Promise<any> {
+  private async simulateVirusTotalScan(_resource: string): Promise<VirusTotalResult> {
     // Simulate VirusTotal API call
-    await new Promise((resolve) => setTimeout(resolve, 200));
+    await new Promise(resolve => setTimeout(resolve, 200));
 
     // Generate sample VirusTotal result
     return {
@@ -319,14 +296,14 @@ export class AlienVaultClient {
       positives: 2,
       total: 70,
       results: {
-        'Kaspersky': {
+        Kaspersky: {
           engine: 'Kaspersky',
           name: 'Trojan.Generic',
           category: 'malicious',
           confidence: 95,
           raw: { result: 'Trojan.Generic' },
         },
-        'Bitdefender': {
+        Bitdefender: {
           engine: 'Bitdefender',
           name: 'Suspicious.Generic',
           category: 'suspicious',
@@ -348,7 +325,7 @@ export class AlienVaultClient {
       const response = await this.makeRequest(url, {
         headers: {
           'X-OTX-API-KEY': this.config.apiKey,
-          'Accept': 'application/json',
+          Accept: 'application/json',
         },
       });
 
@@ -380,12 +357,12 @@ export class AlienVaultClient {
       const response = await this.makeRequest(url, {
         headers: {
           'X-OTX-API-KEY': this.config.apiKey,
-          'Accept': 'application/json',
+          Accept: 'application/json',
         },
       });
 
       const data = await response.json();
-      
+
       return {
         count: data.count || 0,
         pulses: (data.pulses || []).map((pulse: unknown) => alienVaultPulseSchema.parse(pulse)),
@@ -413,7 +390,7 @@ export class AlienVaultClient {
       const response = await this.makeRequest(url, {
         headers: {
           'X-OTX-API-KEY': this.config.apiKey,
-          'Accept': 'application/json',
+          Accept: 'application/json',
         },
       });
 
@@ -431,18 +408,20 @@ export class AlienVaultClient {
   /**
    * Gets Indicators of Compromise (IoCs) from a specific pulse.
    */
-  async getPulseIndicators(pulseId: string): Promise<Array<{
-    type: string;
-    value: string;
-    description?: string;
-  }>> {
+  async getPulseIndicators(pulseId: string): Promise<
+    Array<{
+      type: string;
+      value: string;
+      description?: string;
+    }>
+  > {
     const url = `${this.config.baseUrl}/pulses/${pulseId}/indicators`;
 
     try {
       const response = await this.makeRequest(url, {
         headers: {
           'X-OTX-API-KEY': this.config.apiKey,
-          'Accept': 'application/json',
+          Accept: 'application/json',
         },
       });
 
@@ -471,10 +450,7 @@ export class AlienVaultClient {
 
     if (!response.ok) {
       const errorData = await this.tryParseError(response);
-      throw new Error(
-        errorData?.error?.message || 
-        `AlienVault OTX API request failed with status ${response.status}`
-      );
+      throw new Error(errorData?.error?.message || `AlienVault OTX API request failed with status ${response.status}`);
     }
 
     return response;
@@ -501,7 +477,7 @@ export class AlienVaultClient {
       const response = await this.makeRequest(url, {
         headers: {
           'X-OTX-API-KEY': this.config.apiKey,
-          'Accept': 'application/json',
+          Accept: 'application/json',
         },
       });
 
