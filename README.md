@@ -11,9 +11,9 @@
 **Production-Ready AlienVault OTX Endpoint Security Scanning MCP Server with VirusTotal Integration**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Node.js](https://img.shields.io/badge/Node-%3E%3D18.0.0-green.svg)](https://nodejs.org/)
+[![Node.js](https://img.shields.io/badge/Node-%3E%3D22.0.0-green.svg)](https://nodejs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.6.3-blue.svg)](https://www.typescriptlang.org/)
-[![MCP](https://img.shields.io/badge/Model_Context_Protocol-2.0.0--beta.0-orange.svg)](https://modelcontextprotocol.io/)
+[![MCP](https://img.shields.io/badge/Model_Context_Protocol-2.0.0-orange.svg)](https://modelcontextprotocol.io/)
 
 ---
 
@@ -65,7 +65,7 @@ This server enables AI agents and applications to perform security scans on vari
 
 ### System Requirements
 
-- **Node.js**: >= 18.0.0
+- **Node.js**: >= 22.0.0
 - **npm**: >= 8.0.0
 - **Operating System**: macOS, Linux, or Windows
 - **Disk Space**: Minimum 100MB for dependencies
@@ -187,20 +187,27 @@ npm start
 ### Example MCP Client Integration
 
 ```typescript
-import { McpClient } from '@modelcontextprotocol/client';
+import { Client } from '@modelcontextprotocol/client';
+import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
 
-const client = new McpClient({
+const client = new Client({ name: 'my-client', version: '1.0.0' });
+const transport = new StdioClientTransport({
   command: 'node',
   args: ['dist/index.js'],
 });
 
+await client.connect(transport);
+
 // Call a scan tool
-const result = await client.invokeTool('scan_macos_pkg', {
-  target: '192.168.1.100',
-  useVirusTotal: true,
+const result = await client.callTool({
+  name: 'scan_macos_pkg',
+  arguments: {
+    target: '192.168.1.100',
+    useVirusTotal: true,
+  },
 });
 
-console.log(result);
+console.log(result.content);
 ```
 
 ---
@@ -224,14 +231,13 @@ console.log(result);
 | `use_virustotal` | Scan resource with VirusTotal | `resource`, `apiKeyIndex`, `wait` |
 | `get_virustotal_analysis` | Get existing VirusTotal analysis | `hash`, `apiKeyIndex` |
 
-### AlienVault OTX Tools (4)
+### AlienVault OTX Tools (3)
 
 | Tool | Description | Parameters |
 |------|-------------|------------|
 | `get_bootstrap_command` | Get bootstrap command for flavor | `flavor`, `target` |
 | `get_bootstrap_urls` | Get all bootstrap URLs | - |
 | `search_pulses` | Search AlienVault OTX pulses | `query`, `limit`, `offset` |
-| `validate_api_key` | Validate AlienVault API key | - |
 
 ### Database Tools (4)
 
@@ -252,26 +258,26 @@ console.log(result);
 
 ## Bootstrap Commands
 
-The server provides pre-configured bootstrap commands for each endpoint flavor:
+The server provides pre-configured bootstrap commands for each endpoint flavor. `<api-key>` below is your resolved `ALIENVAULT_API_KEY` value, and `TARGET=<target>` is only included when a `target` is provided.
 
 ### macOS PKG Installer
 ```bash
-API_KEY=${env:ALIENVAULT_API_KEY} bash -c "$(curl -s https://api.agent.otxb.io/osquery-api-otx/bootstrap?flavor=pkg)"
+API_KEY=<api-key> [TARGET=<target>] bash -c "$(curl -s https://api.agent.otxb.io/osquery-api-otx/bootstrap?flavor=pkg)"
 ```
 
 ### Windows PowerShell
 ```powershell
-[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12; ${env:ALIENVAULT_API_KEY} (new-object Net.WebClient).DownloadString("https://api.agent.otxb.io/osquery-api-otx/bootstrap?flavor=powershell") | iex; install_agent -apikey ${env:ALIENVAULT_API_KEY}
+[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12; API_KEY=<api-key> (new-object Net.WebClient).DownloadString("https://api.agent.otxb.io/osquery-api-otx/bootstrap?flavor=powershell") | iex; install_agent -apikey <api-key> [-target <target>]
 ```
 
 ### Debian APT
 ```bash
-API_KEY=${env:ALIENVAULT_API_KEY} bash -c "$(curl -s https://api.agent.otxb.io/osquery-api-otx/bootstrap?flavor=apt)"
+API_KEY=<api-key> [TARGET=<target>] bash -c "$(curl -s https://api.agent.otxb.io/osquery-api-otx/bootstrap?flavor=apt)"
 ```
 
 ### Redhat RPM
 ```bash
-API_KEY=${env:ALIENVAULT_API_KEY} bash -c "$(curl -s https://api.agent.otxb.io/osquery-api-otx/bootstrap?flavor=rpm)"
+API_KEY=<api-key> [TARGET=<target>] bash -c "$(curl -s https://api.agent.otxb.io/osquery-api-otx/bootstrap?flavor=rpm)"
 ```
 
 ---
@@ -295,7 +301,7 @@ aliensec-mcp-server/
 ├── tsconfig.json
 ├── .env.example
 ├── .gitignore
-├── .eslintrc.json
+├── eslint.config.js
 ├── .prettierrc
 └── README.md
 ```
@@ -361,16 +367,15 @@ Tracks database schema version for migrations.
 
 ### Error Response Format
 
-All errors return structured responses:
+Tool errors return the standard MCP result shape with `isError: true`. The human-readable message is the first content block; `error` carries the JSON-stringified context data (scan ID, flavor, target, etc.) that triggered the failure:
 
 ```json
 {
+  "content": [
+    { "type": "text", "text": "Scan failed: <error message>" }
+  ],
   "isError": true,
-  "error": {
-    "message": "Error description",
-    "code": "ERROR_CODE",
-    "context": { ... }
-  }
+  "error": "{\n  \"scanId\": \"...\",\n  \"flavor\": \"pkg\",\n  \"target\": \"...\",\n  \"error\": \"<error message>\"\n}"
 }
 ```
 
@@ -491,7 +496,7 @@ ls -la dist/
 
 1. **Database Encryption**: Use `DATABASE_ENCRYPTION_KEY` for encrypting sensitive data at rest
 2. **API Key Security**: API keys are never logged; use environment variables or secure vaults
-3. **Memory Safety**: Sensitive strings are hashed (SHA-256) before storage in circuit breaker and API log tables
+3. **Memory Safety**: Sensitive strings are hashed with PBKDF2 (120,000 iterations) before storage in circuit breaker and API log tables
 
 ### Network Security
 
@@ -624,7 +629,7 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 - **TypeScript**: [https://www.typescriptlang.org](https://www.typescriptlang.org)
 - **Zod**: [https://github.com/colinhacks/zod](https://github.com/colinhacks/zod)
 - **Pino**: [https://github.com/pinojs/pino](https://github.com/pinojs/pino)
-- **better-sqlite3**: [https://github.com/WiseLibs/better-sqlite3](https://github.com/WiseLibs/better-sqlite3)
+- **better-sqlite3-multiple-ciphers**: [https://github.com/m4heshd/better-sqlite3-multiple-ciphers](https://github.com/m4heshd/better-sqlite3-multiple-ciphers)
 
 ---
 
