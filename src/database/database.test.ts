@@ -1,6 +1,6 @@
 /**
  * AlienSec MCP Server - Database Tests
- * 
+ *
  * Tests for SQLite database layer with encryption support.
  */
 
@@ -44,7 +44,7 @@ vi.mock('better-sqlite3-multiple-ciphers', () => {
 
     prepare(sql: string) {
       const statement = sql.toLowerCase();
-      
+
       if (statement.includes('insert')) {
         return {
           run: (..._params: unknown[]) => ({ changes: 1, lastInsertRowid: 1 }),
@@ -52,7 +52,7 @@ vi.mock('better-sqlite3-multiple-ciphers', () => {
           all: (..._params: unknown[]) => [],
         };
       }
-      
+
       // Handle COUNT queries
       if (statement.includes('select count(*)') || statement.includes('select count (*')) {
         if (statement.includes('group by')) {
@@ -68,7 +68,7 @@ vi.mock('better-sqlite3-multiple-ciphers', () => {
           all: (..._params: unknown[]) => [],
         };
       }
-      
+
       // Handle SUM queries
       if (statement.includes('select sum(')) {
         if (statement.includes('threats_detected')) {
@@ -93,7 +93,7 @@ vi.mock('better-sqlite3-multiple-ciphers', () => {
           };
         }
       }
-      
+
       // Handle AVG queries
       if (statement.includes('select avg(')) {
         return {
@@ -102,7 +102,7 @@ vi.mock('better-sqlite3-multiple-ciphers', () => {
           all: (..._params: unknown[]) => [],
         };
       }
-      
+
       // Handle GROUP BY queries
       if (statement.includes('group by flavor')) {
         return {
@@ -116,7 +116,7 @@ vi.mock('better-sqlite3-multiple-ciphers', () => {
           ],
         };
       }
-      
+
       if (statement.includes('group by status')) {
         return {
           run: (..._params: unknown[]) => ({ changes: 0, lastInsertRowid: 0 }),
@@ -127,7 +127,7 @@ vi.mock('better-sqlite3-multiple-ciphers', () => {
           ],
         };
       }
-      
+
       // Handle DELETE queries
       if (statement.includes('delete')) {
         if (statement.includes('circuit_breaker_events')) {
@@ -157,7 +157,7 @@ vi.mock('better-sqlite3-multiple-ciphers', () => {
           all: (..._params: unknown[]) => [],
         };
       }
-      
+
       // Handle SELECT version
       if (statement.includes('select') && statement.includes('version')) {
         return {
@@ -166,7 +166,7 @@ vi.mock('better-sqlite3-multiple-ciphers', () => {
           all: (..._params: unknown[]) => [{ version: 1 }],
         };
       }
-      
+
       // Default return for select queries
       if (statement.includes('select')) {
         return {
@@ -175,7 +175,7 @@ vi.mock('better-sqlite3-multiple-ciphers', () => {
           all: (..._params: unknown[]) => [],
         };
       }
-      
+
       return {
         run: (..._params: unknown[]) => ({ changes: 0, lastInsertRowid: 0 }),
         get: (..._params: unknown[]) => null,
@@ -209,13 +209,13 @@ describe('Database Module', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    
+
     testConfig = {
       path: ':memory:',
       encryptionKey: undefined,
       timeout: 5000,
     };
-    
+
     // Ensure directory exists mock
     vi.mocked(fs.existsSync).mockReturnValue(true);
     vi.mocked(fs.mkdirSync).mockReturnValue(undefined);
@@ -275,7 +275,7 @@ describe('Database Module', () => {
           encryptionKey: undefined,
           timeout: 5000,
         };
-        
+
         const database = new AlienSecDatabase(config);
         expect(database).toBeDefined();
       });
@@ -286,7 +286,7 @@ describe('Database Module', () => {
           encryptionKey: 'secret-key',
           timeout: 10000,
         };
-        
+
         const database = new AlienSecDatabase(customConfig);
         expect(database).toBeDefined();
       });
@@ -296,7 +296,7 @@ describe('Database Module', () => {
       it('should connect to database', () => {
         db = new AlienSecDatabase(testConfig);
         const connection = db.connect();
-        
+
         expect(connection).toBeDefined();
         expect(db.isConnected()).toBe(true);
       });
@@ -305,18 +305,18 @@ describe('Database Module', () => {
         db = new AlienSecDatabase(testConfig);
         const conn1 = db.connect();
         const conn2 = db.connect();
-        
+
         expect(conn1).toBe(conn2);
       });
 
       it('should handle connection errors gracefully', () => {
         // Set flag to make MockDatabase constructor throw
         shouldThrowOnConnect = true;
-        
+
         db = new AlienSecDatabase(testConfig);
-        
+
         expect(() => db.connect()).toThrow(DatabaseError);
-        
+
         // Reset flag for other tests
         shouldThrowOnConnect = false;
       });
@@ -326,31 +326,31 @@ describe('Database Module', () => {
       it('should disconnect from database', () => {
         db = new AlienSecDatabase(testConfig);
         db.connect();
-        
+
         expect(db.isConnected()).toBe(true);
-        
+
         db.disconnect();
-        
+
         expect(db.isConnected()).toBe(false);
       });
 
       it('should handle disconnect when not connected', () => {
         db = new AlienSecDatabase(testConfig);
-        
+
         expect(() => db.disconnect()).not.toThrow();
       });
 
       it('should reset repository instances on disconnect', () => {
         db = new AlienSecDatabase(testConfig);
         db.connect();
-        
+
         // Access repositories to create them
         db.getScanRepository();
         db.getCircuitBreakerRepository();
         db.getAPILogRepository();
-        
+
         db.disconnect();
-        
+
         expect(db.isConnected()).toBe(false);
       });
     });
@@ -372,14 +372,14 @@ describe('Database Module', () => {
       it('should return the raw database instance', () => {
         db = new AlienSecDatabase(testConfig);
         db.connect();
-        
+
         const rawDb = db.getDatabase();
         expect(rawDb).toBeDefined();
       });
 
       it('should throw error when not connected', () => {
         db = new AlienSecDatabase(testConfig);
-        
+
         expect(() => db.getDatabase()).toThrow(DatabaseError);
       });
     });
@@ -388,7 +388,7 @@ describe('Database Module', () => {
       it('should return scan repository', () => {
         db = new AlienSecDatabase(testConfig);
         db.connect();
-        
+
         const repo = db.getScanRepository();
         expect(repo).toBeDefined();
         expect(repo).toBeInstanceOf(ScanRepository);
@@ -397,7 +397,7 @@ describe('Database Module', () => {
       it('should return circuit breaker repository', () => {
         db = new AlienSecDatabase(testConfig);
         db.connect();
-        
+
         const repo = db.getCircuitBreakerRepository();
         expect(repo).toBeDefined();
         expect(repo).toBeInstanceOf(CircuitBreakerRepository);
@@ -406,7 +406,7 @@ describe('Database Module', () => {
       it('should return API log repository', () => {
         db = new AlienSecDatabase(testConfig);
         db.connect();
-        
+
         const repo = db.getAPILogRepository();
         expect(repo).toBeDefined();
         expect(repo).toBeInstanceOf(APILogRepository);
@@ -415,22 +415,22 @@ describe('Database Module', () => {
       it('should return same repository instance on subsequent calls', () => {
         db = new AlienSecDatabase(testConfig);
         db.connect();
-        
+
         const repo1 = db.getScanRepository();
         const repo2 = db.getScanRepository();
-        
+
         expect(repo1).toBe(repo2);
       });
 
       it('should create new repository instance after disconnect', () => {
         db = new AlienSecDatabase(testConfig);
         db.connect();
-        
+
         const repo1 = db.getScanRepository();
         db.disconnect();
         db.connect();
         const repo2 = db.getScanRepository();
-        
+
         expect(repo1).not.toBe(repo2);
       });
     });
@@ -439,7 +439,7 @@ describe('Database Module', () => {
       it('should return the database configuration', () => {
         db = new AlienSecDatabase(testConfig);
         const config = db.getConfig();
-        
+
         expect(config).toBeDefined();
         expect(config.path).toBe(testConfig.path);
         expect(config.timeout).toBe(testConfig.timeout);
@@ -451,7 +451,7 @@ describe('Database Module', () => {
     it('should return the same database instance on subsequent calls', () => {
       const db1 = getDatabase();
       const db2 = getDatabase();
-      
+
       expect(db1).toBe(db2);
     });
 
@@ -459,7 +459,7 @@ describe('Database Module', () => {
       const db1 = getDatabase();
       resetDatabase();
       const db2 = getDatabase();
-      
+
       expect(db1).not.toBe(db2);
     });
 
@@ -469,7 +469,7 @@ describe('Database Module', () => {
         encryptionKey: 'custom-key',
         timeout: 10000,
       };
-      
+
       const db = createDatabase(customConfig);
       expect(db).toBeDefined();
       expect(db).toBeInstanceOf(AlienSecDatabase);
@@ -525,7 +525,7 @@ describe('Database Module', () => {
         });
 
         const result = repo.saveScanResult(scanResult as any);
-        
+
         expect(result).toBeDefined();
       });
     });
@@ -545,12 +545,9 @@ describe('Database Module', () => {
         });
 
         const result = repo.getScanById('test-scan-123');
-        
+
         expect(result).toBeDefined();
-        expect(mockGet).toHaveBeenCalledWith(
-          'SELECT * FROM scan_records WHERE scan_id = ?',
-          ['test-scan-123']
-        );
+        expect(mockGet).toHaveBeenCalledWith('SELECT * FROM scan_records WHERE scan_id = ?', ['test-scan-123']);
       });
 
       it('should return undefined for non-existent scan', () => {
@@ -558,7 +555,7 @@ describe('Database Module', () => {
         mockGet.mockReturnValue(undefined);
 
         const result = repo.getScanById('non-existent');
-        
+
         expect(result).toBeUndefined();
       });
     });
@@ -584,7 +581,7 @@ describe('Database Module', () => {
         ]);
 
         const result = repo.getScansByFlavor('pkg', 10);
-        
+
         expect(result).toBeDefined();
         expect(result.length).toBe(2);
       });
@@ -602,7 +599,7 @@ describe('Database Module', () => {
         ]);
 
         const result = repo.getRecentScans(5);
-        
+
         expect(result).toBeDefined();
       });
     });
@@ -619,7 +616,7 @@ describe('Database Module', () => {
         ]);
 
         const result = repo.getScansByStatus('success', 10);
-        
+
         expect(result).toBeDefined();
       });
     });
@@ -628,7 +625,7 @@ describe('Database Module', () => {
       it('should return scan statistics', () => {
         const mockGet = vi.spyOn(repo as any, 'get');
         const mockAll = vi.spyOn(repo as any, 'all');
-        
+
         // Mock total count
         mockGet.mockImplementation((sql: string) => {
           if (sql.includes('COUNT(*)') && !sql.includes('GROUP BY')) {
@@ -642,7 +639,7 @@ describe('Database Module', () => {
           }
           return null;
         });
-        
+
         // Mock grouped results
         mockAll.mockImplementation((sql: string) => {
           if (sql.includes('GROUP BY flavor')) {
@@ -663,7 +660,7 @@ describe('Database Module', () => {
         });
 
         const stats = repo.getScanStats();
-        
+
         expect(stats).toBeDefined();
         expect(stats.total).toBe(10);
       });
@@ -673,7 +670,7 @@ describe('Database Module', () => {
       it('should delete scans older than specified date', () => {
         const olderThan = new Date('2024-01-01');
         const result = repo.deleteOldScans(olderThan, 100);
-        
+
         expect(result).toBe(5);
       });
     });
@@ -704,14 +701,8 @@ describe('Database Module', () => {
           created_at: new Date().toISOString(),
         });
 
-        const result = repo.recordEvent(
-          0,
-          'test-api-key',
-          'rate_limit',
-          300,
-          'Rate limit exceeded'
-        );
-        
+        const result = repo.recordEvent(0, 'test-api-key', 'rate_limit', 300, 'Rate limit exceeded');
+
         expect(result).toBeDefined();
       });
     });
@@ -726,7 +717,7 @@ describe('Database Module', () => {
         });
 
         const result = repo.getEventById(1);
-        
+
         expect(result).toBeDefined();
       });
     });
@@ -744,7 +735,7 @@ describe('Database Module', () => {
         ]);
 
         const result = repo.getOpenEvents(0);
-        
+
         expect(result).toBeDefined();
         expect(result.length).toBe(1);
       });
@@ -760,7 +751,7 @@ describe('Database Module', () => {
         });
 
         const result = repo.getLatestEvent(0);
-        
+
         expect(result).toBeDefined();
       });
 
@@ -769,7 +760,7 @@ describe('Database Module', () => {
         mockGet.mockReturnValue(undefined);
 
         const result = repo.getLatestEvent(0);
-        
+
         expect(result).toBeUndefined();
       });
     });
@@ -780,7 +771,7 @@ describe('Database Module', () => {
         mockGet.mockReturnValue({});
 
         const result = repo.isApiKeyBlocked(0, 'test-key');
-        
+
         expect(result).toBe(true);
       });
 
@@ -789,7 +780,7 @@ describe('Database Module', () => {
         mockGet.mockReturnValue(undefined);
 
         const result = repo.isApiKeyBlocked(0, 'test-key');
-        
+
         expect(result).toBe(false);
       });
     });
@@ -797,7 +788,7 @@ describe('Database Module', () => {
     describe('clearExpiredEvents', () => {
       it('should clear expired events', () => {
         const result = repo.clearExpiredEvents();
-        
+
         expect(result).toBe(3);
       });
     });
@@ -806,7 +797,7 @@ describe('Database Module', () => {
       it('should return circuit breaker statistics', () => {
         const mockGet = vi.spyOn(repo as any, 'get');
         const mockAll = vi.spyOn(repo as any, 'all');
-        
+
         mockGet.mockImplementation((sql: string) => {
           if (sql.includes('COUNT(*)') && !sql.includes('WHERE')) {
             return { count: 10 };
@@ -816,11 +807,11 @@ describe('Database Module', () => {
           }
           return { count: 0 };
         });
-        
+
         mockAll.mockReturnValue([]);
 
         const stats = repo.getCircuitBreakerStats();
-        
+
         expect(stats).toBeDefined();
       });
     });
@@ -853,17 +844,8 @@ describe('Database Module', () => {
           created_at: new Date().toISOString(),
         });
 
-        const result = repo.logRequest(
-          0,
-          'test-api-key',
-          'scan',
-          200,
-          150,
-          true,
-          undefined,
-          '/api/scan'
-        );
-        
+        const result = repo.logRequest(0, 'test-api-key', 'scan', 200, 150, true, undefined, '/api/scan');
+
         expect(result).toBeDefined();
       });
     });
@@ -878,7 +860,7 @@ describe('Database Module', () => {
         });
 
         const result = repo.getLogById(1);
-        
+
         expect(result).toBeDefined();
       });
     });
@@ -896,7 +878,7 @@ describe('Database Module', () => {
         ]);
 
         const result = repo.getRecentLogs(0, 10);
-        
+
         expect(result).toBeDefined();
       });
     });
@@ -913,7 +895,7 @@ describe('Database Module', () => {
         ]);
 
         const result = repo.getFailedRequests(10);
-        
+
         expect(result).toBeDefined();
       });
     });
@@ -931,7 +913,7 @@ describe('Database Module', () => {
         const startDate = new Date('2024-01-01');
         const endDate = new Date();
         const result = repo.getLogsByDateRange(startDate, endDate, 100);
-        
+
         expect(result).toBeDefined();
       });
     });
@@ -940,7 +922,7 @@ describe('Database Module', () => {
       it('should return API statistics', () => {
         const mockGet = vi.spyOn(repo as any, 'get');
         const mockAll = vi.spyOn(repo as any, 'all');
-        
+
         mockGet.mockImplementation((sql: string) => {
           if (sql.includes('COUNT(*)') && !sql.includes('WHERE')) {
             return { count: 100 };
@@ -956,11 +938,11 @@ describe('Database Module', () => {
           }
           return { count: 0 };
         });
-        
+
         mockAll.mockReturnValue([]);
 
         const stats = repo.getApiStats();
-        
+
         expect(stats).toBeDefined();
       });
     });
@@ -969,7 +951,7 @@ describe('Database Module', () => {
       it('should clear old logs', () => {
         const olderThan = new Date('2024-01-01');
         const result = repo.clearOldLogs(olderThan, 1000);
-        
+
         expect(result).toBe(50);
       });
     });

@@ -1,14 +1,13 @@
 {
   "semi": true,
   "trailingComma": "es5",
-  "singleQuote": false,
-  "doubleQuote": true,
+  "singleQuote": true,
   "printWidth": 120,
   "tabWidth": 2,
   "useTabs": false,
   "bracketSpacing": true,
   "bracketSameLine": false,
-  "arrowParens": "as-needed",
+  "arrowParens": "avoid",
   "endOfLine": "lf",
   "plugins": []
 }

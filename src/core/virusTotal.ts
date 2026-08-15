@@ -1,6 +1,6 @@
 /**
  * AlienSec MCP Server - VirusTotal Integration Module
- * 
+ *
  * Provides VirusTotal API integration with rate limiting, circuit breaker pattern,
  * and automatic API key rotation. Note: VirusTotal ToS prohibits using multiple API
  * keys to bypass rate limits. This implementation respects those limits.
@@ -11,13 +11,12 @@ import { z } from 'zod';
 import {
   VirusTotalResult,
   VirusTotalEngineResult,
-  VirusTotalAPIError,
   VirusTotalConfig,
   VirusTotalAPIError as VirusTotalAPIErrorType,
 } from '../types';
 import { getConfig } from '../config';
 import { getDatabase } from '../database';
-import { AlienVaultAPIError, ConfigurationError } from '../types';
+import { ConfigurationError } from '../types';
 
 // ============================================================================
 // VirusTotal API Types & Schemas
@@ -29,30 +28,27 @@ const virusTotalScanResponseSchema = z.object({
     type: z.string(),
     attributes: z.object({
       status: z.string(),
-      last_analysis_stats: z.object({
-        malicious: z.number().optional(),
-        suspicious: z.number().optional(),
-        undetected: z.number().optional(),
-        harmless: z.number().optional(),
-        timeout: z.number().optional(),
-      }).optional(),
-      last_analysis_results: z.record(
-        z.object({
-          category: z.string().optional(),
-          engine_name: z.string().optional(),
-          engine_version: z.string().optional(),
-          method: z.string().optional(),
-          result: z.string().optional(),
+      last_analysis_stats: z
+        .object({
+          malicious: z.number().optional(),
+          suspicious: z.number().optional(),
+          undetected: z.number().optional(),
+          harmless: z.number().optional(),
+          timeout: z.number().optional(),
         })
-      ).optional(),
+        .optional(),
+      last_analysis_results: z
+        .record(
+          z.object({
+            category: z.string().optional(),
+            engine_name: z.string().optional(),
+            engine_version: z.string().optional(),
+            method: z.string().optional(),
+            result: z.string().optional(),
+          })
+        )
+        .optional(),
     }),
-  }),
-});
-
-const virusTotalErrorResponseSchema = z.object({
-  error: z.object({
-    code: z.string(),
-    message: z.string(),
   }),
 });
 
@@ -107,7 +103,7 @@ export class VirusTotalCircuitBreaker {
    */
   canExecute(apiKeyIndex: number): boolean {
     const state = this.states.get(apiKeyIndex);
-    
+
     if (!state) {
       // No state recorded, allow execution
       return true;
@@ -136,7 +132,7 @@ export class VirusTotalCircuitBreaker {
     const state = this.states.get(apiKeyIndex) || this.createState(apiKeyIndex);
     state.lastSuccess = new Date();
     state.successCount++;
-    
+
     // If we're in half-open state and the request succeeded, close the circuit
     if (state.isHalfOpen && state.successCount >= this.config.halfOpenTestCount) {
       state.isHalfOpen = false;
@@ -159,9 +155,7 @@ export class VirusTotalCircuitBreaker {
       // Open the circuit
       state.isOpen = true;
       state.isHalfOpen = false;
-      state.timeoutUntil = new Date(
-        Date.now() + this.config.resetTimeoutSeconds * 1000
-      );
+      state.timeoutUntil = new Date(Date.now() + this.config.resetTimeoutSeconds * 1000);
       state.failureCount = 0;
     }
 
@@ -171,7 +165,7 @@ export class VirusTotalCircuitBreaker {
   /**
    * Creates a new circuit breaker state for an API key.
    */
-  private createState(apiKeyIndex: number): CircuitBreakerState {
+  private createState(_apiKeyIndex: number): CircuitBreakerState {
     return {
       isOpen: false,
       isHalfOpen: false,
@@ -238,11 +232,7 @@ export class VirusTotalClient {
   /**
    * Scans a file or URL using VirusTotal.
    */
-  async scan(
-    resource: string,
-    apiKeyIndex: number = 0,
-    options: { wait?: boolean } = {}
-  ): Promise<VirusTotalResult> {
+  async scan(resource: string, apiKeyIndex: number = 0, options: { wait?: boolean } = {}): Promise<VirusTotalResult> {
     const apiKey = this.getApiKey(apiKeyIndex);
 
     // Check circuit breaker
@@ -264,20 +254,16 @@ export class VirusTotalClient {
     this.checkDailyLimit(apiKeyIndex);
 
     const startTime = Date.now();
-    
+
     try {
-      const response = await this.makeRequest(
-        apiKey,
-        `${this.config.baseUrl}/files`,
-        {
-          method: 'POST',
-          headers: {
-            'x-apikey': apiKey,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ hash: resource }),
-        }
-      );
+      const response = await this.makeRequest(apiKey, `${this.config.baseUrl}/files`, {
+        method: 'POST',
+        headers: {
+          'x-apikey': apiKey,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ hash: resource }),
+      });
 
       // Record success
       this.circuitBreaker.recordSuccess(apiKeyIndex);
@@ -303,13 +289,11 @@ export class VirusTotalClient {
       const errorMessage = error instanceof Error ? error.message : String(error);
       this.logRequest(apiKeyIndex, apiKey, 'scan', 0, Date.now() - startTime, false, errorMessage, '/files');
 
-      throw new VirusTotalAPIErrorType(
-        errorMessage,
-        0,
+      throw new VirusTotalAPIErrorType(errorMessage, 0, isRateLimit, isQuotaExceeded, {
+        apiKeyIndex,
         isRateLimit,
         isQuotaExceeded,
-        { apiKeyIndex, isRateLimit, isQuotaExceeded }
-      );
+      });
     }
   }
 
@@ -344,15 +328,11 @@ export class VirusTotalClient {
     const startTime = Date.now();
 
     try {
-      const response = await this.makeRequest(
-        apiKey,
-        `${this.config.baseUrl}/analyses/${hash}`,
-        {
-          headers: {
-            'x-apikey': apiKey,
-          },
-        }
-      );
+      const response = await this.makeRequest(apiKey, `${this.config.baseUrl}/analyses/${hash}`, {
+        headers: {
+          'x-apikey': apiKey,
+        },
+      });
 
       // Record success
       this.circuitBreaker.recordSuccess(apiKeyIndex);
@@ -360,7 +340,16 @@ export class VirusTotalClient {
       this.recordDailyRequest(apiKeyIndex);
 
       // Log the request
-      this.logRequest(apiKeyIndex, apiKey, 'lookup', response.status, Date.now() - startTime, true, undefined, `/analyses/${hash}`);
+      this.logRequest(
+        apiKeyIndex,
+        apiKey,
+        'lookup',
+        response.status,
+        Date.now() - startTime,
+        true,
+        undefined,
+        `/analyses/${hash}`
+      );
 
       const data = await response.json();
       const parsed = virusTotalScanResponseSchema.parse(data);
@@ -376,40 +365,40 @@ export class VirusTotalClient {
 
       // Log the failed request
       const errorMessage = error instanceof Error ? error.message : String(error);
-      this.logRequest(apiKeyIndex, apiKey, 'lookup', 0, Date.now() - startTime, false, errorMessage, `/analyses/${hash}`);
-
-      throw new VirusTotalAPIErrorType(
-        errorMessage,
+      this.logRequest(
+        apiKeyIndex,
+        apiKey,
+        'lookup',
         0,
+        Date.now() - startTime,
+        false,
+        errorMessage,
+        `/analyses/${hash}`
+      );
+
+      throw new VirusTotalAPIErrorType(errorMessage, 0, isRateLimit, isQuotaExceeded, {
+        apiKeyIndex,
         isRateLimit,
         isQuotaExceeded,
-        { apiKeyIndex, isRateLimit, isQuotaExceeded }
-      );
+      });
     }
   }
 
   /**
    * Makes an HTTP request to the VirusTotal API.
    */
-  private async makeRequest(
-    apiKey: string,
-    url: string,
-    options: RequestInit = {}
-  ): Promise<Response> {
+  private async makeRequest(apiKey: string, url: string, options: RequestInit = {}): Promise<Response> {
     const response = await fetch(url, {
       ...options,
       headers: {
         ...options.headers,
-        'Accept': 'application/json',
+        Accept: 'application/json',
       },
     });
 
     if (!response.ok) {
       const errorData = await this.tryParseError(response);
-      throw new Error(
-        errorData?.error?.message || 
-        `VirusTotal API request failed with status ${response.status}`
-      );
+      throw new Error(errorData?.error?.message || `VirusTotal API request failed with status ${response.status}`);
     }
 
     return response;
@@ -432,11 +421,7 @@ export class VirusTotalClient {
   private isRateLimitError(error: unknown): boolean {
     if (error instanceof Error) {
       const message = error.message.toLowerCase();
-      return (
-        message.includes('rate limit') ||
-        message.includes('too many requests') ||
-        message.includes('429')
-      );
+      return message.includes('rate limit') || message.includes('too many requests') || message.includes('429');
     }
     return false;
   }
@@ -480,12 +465,12 @@ export class VirusTotalClient {
     const lastAnalysisResults = attributes.last_analysis_results || {};
 
     const results: Record<string, VirusTotalEngineResult> = {};
-    
+
     for (const [engineName, result] of Object.entries(lastAnalysisResults)) {
       results[engineName] = {
         engine: engineName,
         name: result.category || 'unknown',
-        category: result.category as any,
+        category: result.category as VirusTotalEngineResult['category'],
         confidence: result.category ? 100 : 0,
         raw: result,
       };
@@ -537,12 +522,7 @@ export class VirusTotalClient {
    * Records a daily request for rate limiting.
    */
   private recordDailyRequest(apiKeyIndex: number): void {
-    const today = new Date().toISOString().split('T')[0];
-    const key = `${apiKeyIndex}:${today}`;
-    this.dailyRequestCounts.set(
-      apiKeyIndex,
-      (this.dailyRequestCounts.get(apiKeyIndex) || 0) + 1
-    );
+    this.dailyRequestCounts.set(apiKeyIndex, (this.dailyRequestCounts.get(apiKeyIndex) || 0) + 1);
   }
 
   /**
@@ -589,13 +569,10 @@ class RateLimiter {
 
     if (tokens <= 0) {
       if (!wait) {
-        throw new VirusTotalAPIErrorType(
-          `Rate limit exceeded for API key ${apiKeyIndex}`,
-          429,
-          true,
-          false,
-          { apiKeyIndex, tokens }
-        );
+        throw new VirusTotalAPIErrorType(`Rate limit exceeded for API key ${apiKeyIndex}`, 429, true, false, {
+          apiKeyIndex,
+          tokens,
+        });
       }
 
       // Calculate how long to wait
@@ -603,9 +580,9 @@ class RateLimiter {
       if (last) {
         const elapsed = (Date.now() - last.getTime()) / 1000; // seconds
         const waitTime = Math.max(0, 60 / this.rateLimitPerMinute - elapsed);
-        
+
         if (waitTime > 0) {
-          await new Promise((resolve) => setTimeout(resolve, waitTime * 1000));
+          await new Promise(resolve => setTimeout(resolve, waitTime * 1000));
           this.refillTokens(apiKeyIndex);
         }
       }
@@ -627,17 +604,14 @@ class RateLimiter {
   private refillTokens(apiKeyIndex: number): void {
     const now = new Date();
     const last = this.lastRefill.get(apiKeyIndex) || now;
-    
+
     const elapsedSeconds = (now.getTime() - last.getTime()) / 1000;
     const tokensToAdd = Math.floor(elapsedSeconds * (this.rateLimitPerMinute / 60));
 
     if (tokensToAdd > 0) {
       const currentTokens = this.tokens.get(apiKeyIndex) ?? this.rateLimitPerMinute;
-      const newTokens = Math.min(
-        this.rateLimitPerMinute,
-        currentTokens + tokensToAdd
-      );
-      
+      const newTokens = Math.min(this.rateLimitPerMinute, currentTokens + tokensToAdd);
+
       this.tokens.set(apiKeyIndex, newTokens);
       this.lastRefill.set(apiKeyIndex, now);
     }
@@ -679,7 +653,4 @@ export function createVirusTotalClient(config: VirusTotalConfig): VirusTotalClie
 // Export
 // ============================================================================
 
-export {
-  DEFAULT_CIRCUIT_BREAKER_CONFIG,
-  RateLimiter,
-};
+export { DEFAULT_CIRCUIT_BREAKER_CONFIG, RateLimiter };

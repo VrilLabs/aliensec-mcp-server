@@ -1,6 +1,6 @@
 /**
  * AlienSec MCP Server - Configuration Tests
- * 
+ *
  * Tests for configuration validation, environment variable parsing, and caching.
  */
 
@@ -17,13 +17,12 @@ import {
   virusTotalConfigSchema,
   databaseConfigSchema,
 } from './index';
-import { AppConfig } from '../types';
 
 describe('Configuration Module', () => {
   beforeEach(() => {
     // Reset config before each test
     resetConfig();
-    
+
     // Setup test environment variables
     process.env.NAME = 'test-server';
     process.env.VERSION = '1.0.0';
@@ -59,7 +58,7 @@ describe('Configuration Module', () => {
     delete process.env.DATABASE_PATH;
     delete process.env.DATABASE_ENCRYPTION_KEY;
     delete process.env.DATABASE_TIMEOUT;
-    
+
     resetConfig();
   });
 
@@ -89,10 +88,16 @@ describe('Configuration Module', () => {
 
     it('should use default values when environment variables are not set', () => {
       // Clear all environment variables
-      Object.keys(process.env).forEach((key) => {
-        if (key.startsWith('NAME') || key.startsWith('VERSION') || key.startsWith('DEBUG') ||
-            key.startsWith('LOG_LEVEL') || key.startsWith('ALIENVAULT') ||
-            key.startsWith('VIRUSTOTAL') || key.startsWith('DATABASE')) {
+      Object.keys(process.env).forEach(key => {
+        if (
+          key.startsWith('NAME') ||
+          key.startsWith('VERSION') ||
+          key.startsWith('DEBUG') ||
+          key.startsWith('LOG_LEVEL') ||
+          key.startsWith('ALIENVAULT') ||
+          key.startsWith('VIRUSTOTAL') ||
+          key.startsWith('DATABASE')
+        ) {
           delete process.env[key];
         }
       });
@@ -205,7 +210,7 @@ describe('Configuration Module', () => {
 
     it('should return missing environment variables', () => {
       delete process.env.ALIENVAULT_API_KEY;
-      
+
       const missing = checkRequiredEnv();
       expect(missing).toContain('ALIENVAULT_API_KEY');
     });
@@ -235,7 +240,7 @@ describe('Configuration Module', () => {
           DEBUG: 'true',
           LOG_LEVEL: 'debug',
         };
-        
+
         const result = serverConfigSchema.parse(env);
         expect(result.NAME).toBe('test');
         expect(result.DEBUG).toBe(true);
@@ -258,7 +263,7 @@ describe('Configuration Module', () => {
           ALIENVAULT_BASE_URL: 'https://test.url',
           ALIENVAULT_DEFAULT_REGION: 'us-west-2',
         };
-        
+
         const result = alienVaultConfigSchema.parse(env);
         expect(result.ALIENVAULT_API_KEY).toBe('test-key');
         expect(result.ALIENVAULT_BASE_URL).toBe('https://test.url');
@@ -288,7 +293,7 @@ describe('Configuration Module', () => {
           VIRUSTOTAL_DAILY_LIMIT: '2000',
           VIRUSTOTAL_CIRCUIT_BREAKER_TIMEOUT: '1200',
         };
-        
+
         const result = virusTotalConfigSchema.parse(env);
         expect(result.VIRUSTOTAL_API_KEYS).toEqual(['key1', 'key2', 'key3']);
         expect(result.VIRUSTOTAL_RATE_LIMIT_PER_MINUTE).toBe(20);
@@ -321,7 +326,7 @@ describe('Configuration Module', () => {
           DATABASE_ENCRYPTION_KEY: 'secret-key',
           DATABASE_TIMEOUT: '15000',
         };
-        
+
         const result = databaseConfigSchema.parse(env);
         expect(result.DATABASE_PATH).toBe('./custom.db');
         expect(result.DATABASE_ENCRYPTION_KEY).toBe('secret-key');

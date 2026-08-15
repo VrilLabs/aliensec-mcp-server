@@ -1,6 +1,6 @@
 /**
  * AlienSec MCP Server - Core Type Definitions
- * 
+ *
  * This module contains all TypeScript interfaces, types, and schemas
  * used throughout the AlienVault OTX Endpoint Security MCP Server.
  */
@@ -162,17 +162,6 @@ export interface VirusTotalEngineResult {
   raw: unknown;
 }
 
-export interface VirusTotalAPIError {
-  code: string;
-  message: string;
-  /** HTTP status code */
-  status: number;
-  /** Whether this is a rate limit error */
-  isRateLimit: boolean;
-  /** Whether this is a quota exceeded error */
-  isQuotaExceeded: boolean;
-}
-
 // ============================================================================
 // Database Types
 // ============================================================================
@@ -258,11 +247,7 @@ export class AlienSecError extends Error {
 }
 
 export class AlienVaultAPIError extends AlienSecError {
-  constructor(
-    message: string,
-    statusCode: number,
-    context?: Record<string, unknown>
-  ) {
+  constructor(message: string, statusCode: number, context?: Record<string, unknown>) {
     super(message, 'ALIENVAULT_API_ERROR', statusCode, true, context);
     this.name = 'AlienVaultAPIError';
   }
@@ -336,56 +321,15 @@ export interface Logger {
 // Utility Types
 // ============================================================================
 
-export type RequireAtLeastOne<T, Keys extends keyof T = keyof T> = Pick<
-  T,
-  Exclude<keyof T, Keys>
-> &
+export type RequireAtLeastOne<T, Keys extends keyof T = keyof T> = Pick<T, Exclude<keyof T, Keys>> &
   {
     [K in Keys]-?: Required<Pick<T, K>> & Partial<Pick<T, Exclude<Keys, K>>>;
   }[Keys];
 
-export type RequireAll<T, Keys extends keyof T = keyof T> = Pick<
-  T,
-  Exclude<keyof T, Keys>
-> &
-  Required<Pick<T, Keys>>;
+export type RequireAll<T, Keys extends keyof T = keyof T> = Pick<T, Exclude<keyof T, Keys>> & Required<Pick<T, Keys>>;
 
 export type PartialBy<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
 
 export type DeepPartial<T> = {
   [P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P];
-};
-
-// ============================================================================
-// Export All Types
-// ============================================================================
-
-export type {
-  ServerConfig,
-  AlienVaultConfig,
-  VirusTotalConfig,
-  DatabaseConfig,
-  AppConfig,
-  EndpointFlavor,
-  ScanRequest,
-  ScanOptions,
-  ScanResult,
-  ScanFinding,
-  VirusTotalResult,
-  VirusTotalEngineResult,
-  VirusTotalAPIError,
-  DatabaseScanRecord,
-  DatabaseCircuitBreakerRecord,
-  DatabaseAPILogRecord,
-  ToolInput,
-  ToolResult,
-  CircuitBreakerState,
-  CircuitBreakerConfig,
-  Logger,
-};
-
-export {
-  // Note: AlienSecError, AlienVaultAPIError, VirusTotalAPIError, DatabaseError, ConfigurationError
-  // are already exported at their class definitions above, so we don't re-export them here
-  // to avoid "Multiple exports with the same name" TypeScript errors
 };

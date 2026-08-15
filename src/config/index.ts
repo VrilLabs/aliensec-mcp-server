@@ -1,6 +1,6 @@
 /**
  * AlienSec MCP Server - Configuration Module
- * 
+ *
  * Centralized configuration management with environment variable validation.
  * Uses Zod for runtime type validation and environment variable parsing.
  */
@@ -17,62 +17,39 @@ const serverConfigSchema = z.object({
   VERSION: z.string().default('1.0.0'),
   DEBUG: z
     .string()
-    .transform((val) => val.toLowerCase() === 'true')
+    .transform(val => val.toLowerCase() === 'true')
     .default('false'),
-  LOG_LEVEL: z
-    .enum(['error', 'warn', 'info', 'debug', 'trace'])
-    .default('info'),
+  LOG_LEVEL: z.enum(['error', 'warn', 'info', 'debug', 'trace']).default('info'),
 });
 
 const alienVaultConfigSchema = z.object({
   ALIENVAULT_API_KEY: z.string().min(1, 'ALIENVAULT_API_KEY is required'),
-  ALIENVAULT_BASE_URL: z
-    .string()
-    .url()
-    .default('https://api.agent.otxb.io'),
-  ALIENVAULT_DEFAULT_REGION: z
-    .string()
-    .default('us-east-1'),
+  ALIENVAULT_BASE_URL: z.string().url().default('https://api.agent.otxb.io'),
+  ALIENVAULT_DEFAULT_REGION: z.string().default('us-east-1'),
 });
 
 const virusTotalConfigSchema = z.object({
   VIRUSTOTAL_API_KEYS: z
     .string()
     .default('')
-    .transform((val) => {
+    .transform(val => {
       // Parse comma-separated API keys
       if (!val.trim()) return [] as string[];
-      return val.split(',').map((key) => key.trim()).filter(Boolean);
+      return val
+        .split(',')
+        .map(key => key.trim())
+        .filter(Boolean);
     }),
-  VIRUSTOTAL_BASE_URL: z
-    .string()
-    .url()
-    .default('https://www.virustotal.com/api/v3'),
-  VIRUSTOTAL_RATE_LIMIT_PER_MINUTE: z
-    .string()
-    .transform(Number)
-    .default('4'),
-  VIRUSTOTAL_DAILY_LIMIT: z
-    .string()
-    .transform(Number)
-    .default('500'),
-  VIRUSTOTAL_CIRCUIT_BREAKER_TIMEOUT: z
-    .string()
-    .transform(Number)
-    .default('300'), // 5 minutes in seconds
+  VIRUSTOTAL_BASE_URL: z.string().url().default('https://www.virustotal.com/api/v3'),
+  VIRUSTOTAL_RATE_LIMIT_PER_MINUTE: z.string().transform(Number).default('4'),
+  VIRUSTOTAL_DAILY_LIMIT: z.string().transform(Number).default('500'),
+  VIRUSTOTAL_CIRCUIT_BREAKER_TIMEOUT: z.string().transform(Number).default('300'), // 5 minutes in seconds
 });
 
 const databaseConfigSchema = z.object({
-  DATABASE_PATH: z
-    .string()
-    .default('./data/aliensec.db'),
-  DATABASE_ENCRYPTION_KEY: z
-    .string()
-    .optional(),
-  DATABASE_TIMEOUT: z
-    .string()
-    .transform(Number)
-    .default('5000'), // 5 seconds in milliseconds
+  DATABASE_PATH: z.string().default('./data/aliensec.db'),
+  DATABASE_ENCRYPTION_KEY: z.string().optional(),
+  DATABASE_TIMEOUT: z.string().transform(Number).default('5000'), // 5 seconds in milliseconds
 });
 
 // ============================================================================
@@ -136,7 +113,7 @@ export function getConfig(): AppConfig {
   if (cachedConfig) {
     return cachedConfig;
   }
-  
+
   cachedConfig = validateConfig();
   return cachedConfig;
 }
@@ -151,9 +128,7 @@ export function resetConfig(): void {
 /**
  * Creates a configuration object from explicit values (useful for testing).
  */
-export function createConfig(
-  overrides: Partial<AppConfig> = {}
-): AppConfig {
+export function createConfig(overrides: Partial<AppConfig> = {}): AppConfig {
   const defaultConfig: AppConfig = {
     server: {
       name: 'aliensec-mcp-server',
@@ -198,12 +173,10 @@ export function createConfig(
  * Returns a list of missing environment variable names.
  */
 export function checkRequiredEnv(): string[] {
-  const required = [
-    'ALIENVAULT_API_KEY',
-  ] as const;
+  const required = ['ALIENVAULT_API_KEY'] as const;
 
   const missing: string[] = [];
-  
+
   for (const key of required) {
     if (!process.env[key]) {
       missing.push(key);
@@ -221,9 +194,9 @@ export function getMissingEnvError(missing: string[]): string {
 
   const message = [
     'Missing required environment variables:',
-    ...missing.map((key) => `  - ${key}`),
+    ...missing.map(key => `  - ${key}`),
     '',
-    'Please set these variables before starting the server.'
+    'Please set these variables before starting the server.',
   ].join('\n');
 
   return message;
@@ -233,9 +206,4 @@ export function getMissingEnvError(missing: string[]): string {
 // Export
 // ============================================================================
 
-export {
-  serverConfigSchema,
-  alienVaultConfigSchema,
-  virusTotalConfigSchema,
-  databaseConfigSchema,
-};
+export { serverConfigSchema, alienVaultConfigSchema, virusTotalConfigSchema, databaseConfigSchema };

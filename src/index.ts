@@ -1,9 +1,9 @@
 /**
  * AlienSec MCP Server - Main Entry Point
- * 
+ *
  * This is the production-ready MCP (Model Context Protocol) server for AlienVault OTX
  * Endpoint Security Scanning with VirusTotal Integration.
- * 
+ *
  * Features:
  * - Scan macOS PKG Installer endpoints
  * - Scan Windows endpoints via PowerShell
@@ -20,34 +20,11 @@ import { serveStdio } from '@modelcontextprotocol/server/stdio';
 import { z } from 'zod';
 import * as crypto from 'crypto';
 import pino from 'pino';
-import {
-  getConfig,
-  createConfig,
-  checkRequiredEnv,
-  getMissingEnvError,
-} from './config';
-import {
-  getDatabase,
-  resetDatabase,
-  AlienSecDatabase,
-} from './database';
-import {
-  getAlienVaultClient,
-  resetAlienVaultClient,
-  BOOTSTRAP_URLS,
-} from './core/alienVault';
-import {
-  getVirusTotalClient,
-  resetVirusTotalClient,
-} from './core/virusTotal';
-import {
-  EndpointFlavor,
-  ScanRequest,
-  ScanResult,
-  VirusTotalResult,
-  ToolResult,
-  AlienSecError,
-} from './types';
+import { getConfig, checkRequiredEnv, getMissingEnvError } from './config';
+import { getDatabase, resetDatabase } from './database';
+import { getAlienVaultClient, resetAlienVaultClient, BOOTSTRAP_URLS } from './core/alienVault';
+import { getVirusTotalClient, resetVirusTotalClient } from './core/virusTotal';
+import { ScanRequest, ToolResult } from './types';
 
 // ============================================================================
 // Server Configuration
@@ -62,17 +39,17 @@ const SERVER_VERSION = '1.0.0';
 
 function createLogger() {
   const config = getConfig();
-  
+
   return pino({
     level: config.server.logLevel,
     name: SERVER_NAME,
     timestamp: () => new Date().toISOString(),
     messageKey: 'message',
     formatters: {
-      level: (label) => ({ level: label.toUpperCase() }),
-      log: (object) => {
+      level: label => ({ level: label.toUpperCase() }),
+      log: object => {
         // Redact sensitive information
-        const { apiKey, ...rest } = object;
+        const { apiKey: _apiKey, ...rest } = object;
         return rest;
       },
     },
@@ -123,15 +100,13 @@ function createMcpServer(): McpServer {
     'scan_endpoint',
     {
       title: 'Scan Endpoint with AlienVault OTX',
-      description: 'Scan an endpoint using AlienVault OTX agent. Supports macOS PKG, Windows PowerShell, Debian APT, and Redhat RPM endpoints.',
+      description:
+        'Scan an endpoint using AlienVault OTX agent. Supports macOS PKG, Windows PowerShell, Debian APT, and Redhat RPM endpoints.',
       inputSchema: z.object({
         flavor: z
           .enum(['pkg', 'powershell', 'apt', 'rpm'] as const)
           .describe('Endpoint flavor to scan: pkg (macOS), powershell (Windows), apt (Debian), rpm (Redhat)'),
-        target: z
-          .string()
-          .optional()
-          .describe('Target hostname or IP address to scan'),
+        target: z.string().optional().describe('Target hostname or IP address to scan'),
         useVirusTotal: z
           .boolean()
           .optional()
@@ -148,7 +123,6 @@ function createMcpServer(): McpServer {
     },
     async ({ flavor, target, useVirusTotal, apiKeyIndex }) => {
       const scanId = crypto.randomBytes(16).toString('hex');
-      const timestamp = new Date();
       const actualTarget = target || 'localhost';
 
       try {
@@ -176,42 +150,43 @@ function createMcpServer(): McpServer {
         });
 
         // Format the response
-        return createToolResult(
-          `Scan ${scanId} completed successfully for ${actualTarget} (${flavor})`,
-          {
-            scanId: result.scanId,
-            timestamp: result.timestamp.toISOString(),
-            flavor: result.flavor,
-            target: result.target,
-            status: result.status,
-            threatsDetected: result.threatsDetected,
-            warnings: result.warnings,
-            findings: result.findings.map((f) => ({
-              id: f.id,
-              severity: f.severity,
-              type: f.type,
-              description: f.description,
-              affected: f.affected,
-              iocs: f.iocs,
-              confidence: f.confidence,
-              source: f.source,
-            })),
-            virusTotal: result.virusTotal ? {
-              scanId: result.virusTotal.scanId,
-              positives: result.virusTotal.positives,
-              total: result.virusTotal.total,
-              permalink: result.virusTotal.permalink,
-            } : undefined,
-          }
-        );
+        return createToolResult(`Scan ${scanId} completed successfully for ${actualTarget} (${flavor})`, {
+          scanId: result.scanId,
+          timestamp: result.timestamp.toISOString(),
+          flavor: result.flavor,
+          target: result.target,
+          status: result.status,
+          threatsDetected: result.threatsDetected,
+          warnings: result.warnings,
+          findings: result.findings.map(f => ({
+            id: f.id,
+            severity: f.severity,
+            type: f.type,
+            description: f.description,
+            affected: f.affected,
+            iocs: f.iocs,
+            confidence: f.confidence,
+            source: f.source,
+          })),
+          virusTotal: result.virusTotal
+            ? {
+                scanId: result.virusTotal.scanId,
+                positives: result.virusTotal.positives,
+                total: result.virusTotal.total,
+                permalink: result.virusTotal.permalink,
+              }
+            : undefined,
+        });
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         logger.error('Endpoint scan failed', { scanId, flavor, target: actualTarget, error: errorMessage });
 
-        return createToolError(
-          `Scan failed: ${errorMessage}`,
-          { scanId, flavor, target: actualTarget, error: errorMessage }
-        );
+        return createToolError(`Scan failed: ${errorMessage}`, {
+          scanId,
+          flavor,
+          target: actualTarget,
+          error: errorMessage,
+        });
       }
     }
   );
@@ -225,15 +200,8 @@ function createMcpServer(): McpServer {
       title: 'Scan macOS PKG Installer',
       description: 'Scan a macOS system using the PKG installer flavor of AlienVault OTX agent.',
       inputSchema: z.object({
-        target: z
-          .string()
-          .optional()
-          .describe('Target macOS hostname or IP address'),
-        useVirusTotal: z
-          .boolean()
-          .optional()
-          .default(false)
-          .describe('Enable VirusTotal integration'),
+        target: z.string().optional().describe('Target macOS hostname or IP address'),
+        useVirusTotal: z.boolean().optional().default(false).describe('Enable VirusTotal integration'),
       }),
     },
     async ({ target, useVirusTotal }) => {
@@ -254,15 +222,8 @@ function createMcpServer(): McpServer {
       title: 'Scan Windows Endpoint',
       description: 'Scan a Windows system using the PowerShell flavor of AlienVault OTX agent.',
       inputSchema: z.object({
-        target: z
-          .string()
-          .optional()
-          .describe('Target Windows hostname or IP address'),
-        useVirusTotal: z
-          .boolean()
-          .optional()
-          .default(false)
-          .describe('Enable VirusTotal integration'),
+        target: z.string().optional().describe('Target Windows hostname or IP address'),
+        useVirusTotal: z.boolean().optional().default(false).describe('Enable VirusTotal integration'),
       }),
     },
     async ({ target, useVirusTotal }) => {
@@ -283,15 +244,8 @@ function createMcpServer(): McpServer {
       title: 'Scan Debian/APT Endpoint',
       description: 'Scan a Debian/Ubuntu system using the APT flavor of AlienVault OTX agent.',
       inputSchema: z.object({
-        target: z
-          .string()
-          .optional()
-          .describe('Target Debian/Ubuntu hostname or IP address'),
-        useVirusTotal: z
-          .boolean()
-          .optional()
-          .default(false)
-          .describe('Enable VirusTotal integration'),
+        target: z.string().optional().describe('Target Debian/Ubuntu hostname or IP address'),
+        useVirusTotal: z.boolean().optional().default(false).describe('Enable VirusTotal integration'),
       }),
     },
     async ({ target, useVirusTotal }) => {
@@ -312,15 +266,8 @@ function createMcpServer(): McpServer {
       title: 'Scan Redhat/RPM Endpoint',
       description: 'Scan a Redhat/CentOS system using the RPM flavor of AlienVault OTX agent.',
       inputSchema: z.object({
-        target: z
-          .string()
-          .optional()
-          .describe('Target Redhat/CentOS hostname or IP address'),
-        useVirusTotal: z
-          .boolean()
-          .optional()
-          .default(false)
-          .describe('Enable VirusTotal integration'),
+        target: z.string().optional().describe('Target Redhat/CentOS hostname or IP address'),
+        useVirusTotal: z.boolean().optional().default(false).describe('Enable VirusTotal integration'),
       }),
     },
     async ({ target, useVirusTotal }) => {
@@ -343,11 +290,10 @@ function createMcpServer(): McpServer {
     'use_virustotal',
     {
       title: 'Scan with VirusTotal',
-      description: 'Scan a file hash or URL using VirusTotal API. Note: Respects VirusTotal ToS - multiple API keys are for redundancy, not for bypassing rate limits.',
+      description:
+        'Scan a file hash or URL using VirusTotal API. Note: Respects VirusTotal ToS - multiple API keys are for redundancy, not for bypassing rate limits.',
       inputSchema: z.object({
-        resource: z
-          .string()
-          .describe('File hash (SHA-256, MD5, SHA-1) or URL to scan'),
+        resource: z.string().describe('File hash (SHA-256, MD5, SHA-1) or URL to scan'),
         apiKeyIndex: z
           .number()
           .int()
@@ -355,11 +301,7 @@ function createMcpServer(): McpServer {
           .optional()
           .default(0)
           .describe('VirusTotal API key index to use (0-based)'),
-        wait: z
-          .boolean()
-          .optional()
-          .default(true)
-          .describe('Whether to wait if rate limited (default: true)'),
+        wait: z.boolean().optional().default(true).describe('Whether to wait if rate limited (default: true)'),
       }),
     },
     async ({ resource, apiKeyIndex, wait }) => {
@@ -398,10 +340,12 @@ function createMcpServer(): McpServer {
         const errorMessage = error instanceof Error ? error.message : String(error);
         logger.error('VirusTotal scan failed', { scanId, resource, apiKeyIndex, error: errorMessage });
 
-        return createToolError(
-          `VirusTotal scan failed: ${errorMessage}`,
-          { scanId, resource, apiKeyIndex, error: errorMessage }
-        );
+        return createToolError(`VirusTotal scan failed: ${errorMessage}`, {
+          scanId,
+          resource,
+          apiKeyIndex,
+          error: errorMessage,
+        });
       }
     }
   );
@@ -415,16 +359,8 @@ function createMcpServer(): McpServer {
       title: 'Get VirusTotal Analysis',
       description: 'Get existing analysis results for a file hash from VirusTotal.',
       inputSchema: z.object({
-        hash: z
-          .string()
-          .describe('File hash to get analysis for'),
-        apiKeyIndex: z
-          .number()
-          .int()
-          .nonnegative()
-          .optional()
-          .default(0)
-          .describe('VirusTotal API key index to use'),
+        hash: z.string().describe('File hash to get analysis for'),
+        apiKeyIndex: z.number().int().nonnegative().optional().default(0).describe('VirusTotal API key index to use'),
       }),
     },
     async ({ hash, apiKeyIndex }) => {
@@ -454,10 +390,12 @@ function createMcpServer(): McpServer {
         const errorMessage = error instanceof Error ? error.message : String(error);
         logger.error('Failed to get VirusTotal analysis', { requestId, hash, apiKeyIndex, error: errorMessage });
 
-        return createToolError(
-          `Failed to get VirusTotal analysis: ${errorMessage}`,
-          { requestId, hash, apiKeyIndex, error: errorMessage }
-        );
+        return createToolError(`Failed to get VirusTotal analysis: ${errorMessage}`, {
+          requestId,
+          hash,
+          apiKeyIndex,
+          error: errorMessage,
+        });
       }
     }
   );
@@ -478,10 +416,7 @@ function createMcpServer(): McpServer {
         flavor: z
           .enum(['pkg', 'powershell', 'apt', 'rpm'] as const)
           .describe('Endpoint flavor: pkg (macOS), powershell (Windows), apt (Debian), rpm (Redhat)'),
-        target: z
-          .string()
-          .optional()
-          .describe('Optional target hostname for the bootstrap command'),
+        target: z.string().optional().describe('Optional target hostname for the bootstrap command'),
       }),
     },
     async ({ flavor, target }) => {
@@ -489,21 +424,19 @@ function createMcpServer(): McpServer {
         const alienVaultClient = getAlienVaultClient();
         const command = alienVaultClient.getBootstrapCommand(flavor, target);
 
-        return createToolResult(
-          `Bootstrap command for ${flavor} flavor`,
-          {
-            flavor,
-            target: target || 'localhost',
-            command,
-            url: BOOTSTRAP_URLS[flavor],
-          }
-        );
+        return createToolResult(`Bootstrap command for ${flavor} flavor`, {
+          flavor,
+          target: target || 'localhost',
+          command,
+          url: BOOTSTRAP_URLS[flavor],
+        });
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
-        return createToolError(
-          `Failed to generate bootstrap command: ${errorMessage}`,
-          { flavor, target, error: errorMessage }
-        );
+        return createToolError(`Failed to generate bootstrap command: ${errorMessage}`, {
+          flavor,
+          target,
+          error: errorMessage,
+        });
       }
     }
   );
@@ -519,10 +452,7 @@ function createMcpServer(): McpServer {
       inputSchema: z.object({}),
     },
     async () => {
-      return createToolResult(
-        'AlienVault OTX Bootstrap URLs',
-        BOOTSTRAP_URLS
-      );
+      return createToolResult('AlienVault OTX Bootstrap URLs', BOOTSTRAP_URLS);
     }
   );
 
@@ -535,23 +465,9 @@ function createMcpServer(): McpServer {
       title: 'Search AlienVault OTX Pulses',
       description: 'Search for threat intelligence pulses in AlienVault OTX.',
       inputSchema: z.object({
-        query: z
-          .string()
-          .describe('Search query for pulses'),
-        limit: z
-          .number()
-          .int()
-          .positive()
-          .optional()
-          .default(20)
-          .describe('Maximum number of results to return'),
-        offset: z
-          .number()
-          .int()
-          .nonnegative()
-          .optional()
-          .default(0)
-          .describe('Offset for pagination'),
+        query: z.string().describe('Search query for pulses'),
+        limit: z.number().int().positive().optional().default(20).describe('Maximum number of results to return'),
+        offset: z.number().int().nonnegative().optional().default(0).describe('Offset for pagination'),
       }),
     },
     async ({ query, limit, offset }) => {
@@ -563,29 +479,29 @@ function createMcpServer(): McpServer {
         const alienVaultClient = getAlienVaultClient();
         const result = await alienVaultClient.searchPulses(query, limit, offset);
 
-        return createToolResult(
-          `Found ${result.count} pulses matching "${query}"`,
-          {
-            count: result.count,
-            pulses: result.pulses.map((p) => ({
-              id: p.id,
-              name: p.name,
-              description: p.description,
-              author: p.author,
-              created: p.created,
-              modified: p.modified,
-              tags: p.tags,
-            })),
-          }
-        );
+        return createToolResult(`Found ${result.count} pulses matching "${query}"`, {
+          count: result.count,
+          pulses: result.pulses.map(p => ({
+            id: p.id,
+            name: p.name,
+            description: p.description,
+            author: p.author,
+            created: p.created,
+            modified: p.modified,
+            tags: p.tags,
+          })),
+        });
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         logger.error('Failed to search pulses', { requestId, query, limit, offset, error: errorMessage });
 
-        return createToolError(
-          `Failed to search pulses: ${errorMessage}`,
-          { requestId, query, limit, offset, error: errorMessage }
-        );
+        return createToolError(`Failed to search pulses: ${errorMessage}`, {
+          requestId,
+          query,
+          limit,
+          offset,
+          error: errorMessage,
+        });
       }
     }
   );
@@ -610,16 +526,10 @@ function createMcpServer(): McpServer {
         const repo = db.getScanRepository();
         const stats = repo.getScanStats();
 
-        return createToolResult(
-          'Scan Statistics',
-          stats
-        );
+        return createToolResult('Scan Statistics', stats);
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
-        return createToolError(
-          `Failed to get scan statistics: ${errorMessage}`,
-          { error: errorMessage }
-        );
+        return createToolError(`Failed to get scan statistics: ${errorMessage}`, { error: errorMessage });
       }
     }
   );
@@ -633,13 +543,7 @@ function createMcpServer(): McpServer {
       title: 'Get Recent Scans',
       description: 'Get a list of recent scans from the database.',
       inputSchema: z.object({
-        limit: z
-          .number()
-          .int()
-          .positive()
-          .optional()
-          .default(10)
-          .describe('Maximum number of scans to return'),
+        limit: z.number().int().positive().optional().default(10).describe('Maximum number of scans to return'),
       }),
     },
     async ({ limit }) => {
@@ -650,7 +554,7 @@ function createMcpServer(): McpServer {
 
         return createToolResult(
           `Recent Scans (last ${limit})`,
-          scans.map((s) => ({
+          scans.map(s => ({
             scanId: s.scan_id,
             timestamp: s.timestamp,
             flavor: s.flavor,
@@ -662,10 +566,7 @@ function createMcpServer(): McpServer {
         );
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
-        return createToolError(
-          `Failed to get recent scans: ${errorMessage}`,
-          { limit, error: errorMessage }
-        );
+        return createToolError(`Failed to get recent scans: ${errorMessage}`, { limit, error: errorMessage });
       }
     }
   );
@@ -686,16 +587,10 @@ function createMcpServer(): McpServer {
         const repo = db.getCircuitBreakerRepository();
         const stats = repo.getCircuitBreakerStats();
 
-        return createToolResult(
-          'Circuit Breaker Statistics',
-          stats
-        );
+        return createToolResult('Circuit Breaker Statistics', stats);
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
-        return createToolError(
-          `Failed to get circuit breaker statistics: ${errorMessage}`,
-          { error: errorMessage }
-        );
+        return createToolError(`Failed to get circuit breaker statistics: ${errorMessage}`, { error: errorMessage });
       }
     }
   );
@@ -716,16 +611,10 @@ function createMcpServer(): McpServer {
         const repo = db.getAPILogRepository();
         const stats = repo.getApiStats();
 
-        return createToolResult(
-          'API Statistics',
-          stats
-        );
+        return createToolResult('API Statistics', stats);
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
-        return createToolError(
-          `Failed to get API statistics: ${errorMessage}`,
-          { error: errorMessage }
-        );
+        return createToolError(`Failed to get API statistics: ${errorMessage}`, { error: errorMessage });
       }
     }
   );
@@ -749,36 +638,32 @@ function createMcpServer(): McpServer {
       const db = getDatabase();
 
       const alienVaultClient = getAlienVaultClient();
-      const virusTotalClient = getVirusTotalClient();
 
       const alienVaultApiValid = await alienVaultClient.validateApiKey().catch(() => false);
 
-      return createToolResult(
-        'Server Health Status',
-        {
-          server: {
-            name: config.server.name,
-            version: config.server.version,
-            uptime: process.uptime(),
-            nodeVersion: process.version,
-          },
-          database: {
-            connected: db.isConnected(),
-            path: config.database.path,
-            encrypted: !!config.database.encryptionKey,
-          },
-          alienVault: {
-            configured: !!config.alienVault.apiKey,
-            apiValid: alienVaultApiValid,
-            baseUrl: config.alienVault.baseUrl,
-          },
-          virusTotal: {
-            configured: config.virusTotal.apiKeys.length > 0,
-            apiKeyCount: config.virusTotal.apiKeys.length,
-            baseUrl: config.virusTotal.baseUrl,
-          },
-        }
-      );
+      return createToolResult('Server Health Status', {
+        server: {
+          name: config.server.name,
+          version: config.server.version,
+          uptime: process.uptime(),
+          nodeVersion: process.version,
+        },
+        database: {
+          connected: db.isConnected(),
+          path: config.database.path,
+          encrypted: !!config.database.encryptionKey,
+        },
+        alienVault: {
+          configured: !!config.alienVault.apiKey,
+          apiValid: alienVaultApiValid,
+          baseUrl: config.alienVault.baseUrl,
+        },
+        virusTotal: {
+          configured: config.virusTotal.apiKeys.length > 0,
+          apiKeyCount: config.virusTotal.apiKeys.length,
+          baseUrl: config.virusTotal.baseUrl,
+        },
+      });
     }
   );
 
@@ -814,7 +699,7 @@ function createToolError<T>(message: string, data?: T): ToolResult {
   let errorString = '';
   try {
     errorString = JSON.stringify(data || {}, null, 2);
-  } catch (e) {
+  } catch {
     // Handle circular references
     errorString = String(data || {});
   }
@@ -855,9 +740,9 @@ async function main(): Promise<void> {
 
   // Start the MCP server
   logger.info('Starting AlienSec MCP Server...');
-  
+
   serveStdio(createMcpServer);
-  
+
   logger.info('AlienSec MCP Server running on stdio');
 }
 
@@ -873,7 +758,7 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 
 // Handle uncaught exceptions
-process.on('uncaughtException', (error) => {
+process.on('uncaughtException', error => {
   const logger = createLogger();
   logger.error('Uncaught Exception', { error });
   console.error('Uncaught Exception:', error);
@@ -884,18 +769,18 @@ process.on('uncaughtException', (error) => {
 process.on('SIGTERM', () => {
   const logger = createLogger();
   logger.info('Received SIGTERM, shutting down gracefully...');
-  
+
   try {
     const db = getDatabase();
     if (db.isConnected()) {
       db.disconnect();
       logger.info('Database connection closed');
     }
-    
+
     resetAlienVaultClient();
     resetVirusTotalClient();
     resetDatabase();
-    
+
     logger.info('Server shutdown complete');
   } catch (error) {
     logger.error('Error during shutdown', { error });
@@ -915,12 +800,7 @@ process.on('SIGINT', () => {
 // Export for Testing
 // ============================================================================
 
-export {
-  createMcpServer,
-  createLogger,
-  createToolResult,
-  createToolError,
-};
+export { createMcpServer, createLogger, createToolResult, createToolError };
 
 // ============================================================================
 // Run the server
