@@ -6,7 +6,7 @@
  */
 
 import { z } from 'zod';
-import { AppConfig, ServerConfig, AlienVaultConfig, VirusTotalConfig, DatabaseConfig } from '../types';
+import { AppConfig, ServerConfig, AlienVaultConfig, VirusTotalConfig, DatabaseConfig } from '../types/index.js';
 
 // ============================================================================
 // Environment Schema Definitions
@@ -17,8 +17,8 @@ const serverConfigSchema = z.object({
   VERSION: z.string().default('1.0.0'),
   DEBUG: z
     .string()
-    .transform(val => val.toLowerCase() === 'true')
-    .default('false'),
+    .default('false')
+    .transform(val => val.toLowerCase() === 'true'),
   LOG_LEVEL: z.enum(['error', 'warn', 'info', 'debug', 'trace']).default('info'),
 });
 
@@ -41,15 +41,15 @@ const virusTotalConfigSchema = z.object({
         .filter(Boolean);
     }),
   VIRUSTOTAL_BASE_URL: z.string().url().default('https://www.virustotal.com/api/v3'),
-  VIRUSTOTAL_RATE_LIMIT_PER_MINUTE: z.string().transform(Number).default('4'),
-  VIRUSTOTAL_DAILY_LIMIT: z.string().transform(Number).default('500'),
-  VIRUSTOTAL_CIRCUIT_BREAKER_TIMEOUT: z.string().transform(Number).default('300'), // 5 minutes in seconds
+  VIRUSTOTAL_RATE_LIMIT_PER_MINUTE: z.string().default('4').transform(Number),
+  VIRUSTOTAL_DAILY_LIMIT: z.string().default('500').transform(Number),
+  VIRUSTOTAL_CIRCUIT_BREAKER_TIMEOUT: z.string().default('300').transform(Number), // 5 minutes in seconds
 });
 
 const databaseConfigSchema = z.object({
   DATABASE_PATH: z.string().default('./data/aliensec.db'),
   DATABASE_ENCRYPTION_KEY: z.string().optional(),
-  DATABASE_TIMEOUT: z.string().transform(Number).default('5000'), // 5 seconds in milliseconds
+  DATABASE_TIMEOUT: z.string().default('5000').transform(Number), // 5 seconds in milliseconds
 });
 
 // ============================================================================

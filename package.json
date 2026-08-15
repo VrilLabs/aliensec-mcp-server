@@ -38,10 +38,9 @@
     "@modelcontextprotocol/sdk": "^1.17.3",
     "@modelcontextprotocol/server": "^2.0.0",
     "better-sqlite3-multiple-ciphers": "^13.0.3",
-    "node-fetch": "^3.3.2",
     "pino": "^9.4.0",
     "pino-http": "^10.3.0",
-    "zod": "^3.23.8"
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.11",

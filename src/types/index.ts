@@ -218,16 +218,7 @@ export interface ToolInput {
   [key: string]: unknown;
 }
 
-export interface ToolResult {
-  content: Array<{
-    type: 'text' | 'image' | 'resource';
-    text?: string;
-    mimeType?: string;
-    uri?: string;
-  }>;
-  isError?: boolean;
-  error?: string;
-}
+export type { CallToolResult as ToolResult } from '@modelcontextprotocol/server';
 
 // ============================================================================
 // Error Types

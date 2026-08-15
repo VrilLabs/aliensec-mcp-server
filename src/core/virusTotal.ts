@@ -6,17 +6,16 @@
  * keys to bypass rate limits. This implementation respects those limits.
  */
 
-import fetch from 'node-fetch';
 import { z } from 'zod';
 import {
   VirusTotalResult,
   VirusTotalEngineResult,
   VirusTotalConfig,
   VirusTotalAPIError as VirusTotalAPIErrorType,
-} from '../types';
-import { getConfig } from '../config';
-import { getDatabase } from '../database';
-import { ConfigurationError } from '../types';
+  ConfigurationError,
+} from '../types/index.js';
+import { getConfig } from '../config/index.js';
+import { getDatabase } from '../database/index.js';
 
 // ============================================================================
 // VirusTotal API Types & Schemas
@@ -39,6 +38,7 @@ const virusTotalScanResponseSchema = z.object({
         .optional(),
       last_analysis_results: z
         .record(
+          z.string(),
           z.object({
             category: z.string().optional(),
             engine_name: z.string().optional(),
@@ -214,10 +214,8 @@ export class VirusTotalClient {
   private readonly config: VirusTotalConfig;
   private readonly circuitBreaker: VirusTotalCircuitBreaker;
   private readonly rateLimiter: RateLimiter;
-  private readonly database;
 
   // Track request counts for rate limiting
-  private lastRequestTimestamps: Map<number, Date[]> = new Map();
   private dailyRequestCounts: Map<number, number> = new Map();
 
   constructor(config: VirusTotalConfig = getConfig().virusTotal) {
@@ -226,7 +224,6 @@ export class VirusTotalClient {
       resetTimeoutSeconds: config.circuitBreakerTimeout,
     });
     this.rateLimiter = new RateLimiter(config.rateLimitPerMinute);
-    this.database = getDatabase();
   }
 
   /**
@@ -256,7 +253,7 @@ export class VirusTotalClient {
     const startTime = Date.now();
 
     try {
-      const response = await this.makeRequest(apiKey, `${this.config.baseUrl}/files`, {
+      const response = await this.makeRequest(`${this.config.baseUrl}/files`, {
         method: 'POST',
         headers: {
           'x-apikey': apiKey,
@@ -328,7 +325,7 @@ export class VirusTotalClient {
     const startTime = Date.now();
 
     try {
-      const response = await this.makeRequest(apiKey, `${this.config.baseUrl}/analyses/${hash}`, {
+      const response = await this.makeRequest(`${this.config.baseUrl}/analyses/${hash}`, {
         headers: {
           'x-apikey': apiKey,
         },
@@ -387,7 +384,7 @@ export class VirusTotalClient {
   /**
    * Makes an HTTP request to the VirusTotal API.
    */
-  private async makeRequest(apiKey: string, url: string, options: RequestInit = {}): Promise<Response> {
+  private async makeRequest(url: string, options: RequestInit = {}): Promise<Response> {
     const response = await fetch(url, {
       ...options,
       headers: {
@@ -397,7 +394,7 @@ export class VirusTotalClient {
     });
 
     if (!response.ok) {
-      const errorData = await this.tryParseError(response);
+      const errorData = (await this.tryParseError(response)) as { error?: { message?: string } } | null;
       throw new Error(errorData?.error?.message || `VirusTotal API request failed with status ${response.status}`);
     }
 
@@ -551,7 +548,6 @@ export class VirusTotalClient {
  */
 class RateLimiter {
   private readonly rateLimitPerMinute: number;
-  private readonly intervals: Map<number, Date[]> = new Map();
   private readonly tokens: Map<number, number> = new Map();
   private readonly lastRefill: Map<number, Date> = new Map();
 
