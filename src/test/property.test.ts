@@ -119,22 +119,36 @@ describe('ConfigurationError – property-based tests', () => {
 // ============================================================================
 
 describe('EndpointFlavor – property-based tests', () => {
-  const validFlavors = ['pkg', 'powershell', 'apt', 'rpm'] as const;
+  const VALID_FLAVORS = new Set(['pkg', 'powershell', 'apt', 'rpm']);
 
-  it('valid flavors are always a subset of the known set', () => {
+  /** Mirrors the runtime validation logic used in tool handlers */
+  function isValidFlavor(value: string): boolean {
+    return VALID_FLAVORS.has(value);
+  }
+
+  it('rejects arbitrary strings that are not valid flavors', () => {
     fc.assert(
-      fc.property(fc.constantFrom(...validFlavors), (flavor) => {
-        expect(validFlavors).toContain(flavor);
-      })
+      fc.property(
+        fc.string().filter((s) => !VALID_FLAVORS.has(s)),
+        (s) => {
+          expect(isValidFlavor(s)).toBe(false);
+        }
+      )
     );
   });
 
-  it('arbitrary strings are not valid flavors unless they match exactly', () => {
+  it('accepts every known valid flavor', () => {
+    for (const flavor of VALID_FLAVORS) {
+      expect(isValidFlavor(flavor)).toBe(true);
+    }
+  });
+
+  it('flavor validation is case-sensitive', () => {
     fc.assert(
       fc.property(
-        fc.string().filter((s) => !validFlavors.includes(s as (typeof validFlavors)[number])),
-        (s) => {
-          expect(validFlavors).not.toContain(s);
+        fc.constantFrom('PKG', 'POWERSHELL', 'APT', 'RPM', 'Pkg', 'Apt'),
+        (upper) => {
+          expect(isValidFlavor(upper)).toBe(false);
         }
       )
     );
