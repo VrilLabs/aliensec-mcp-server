@@ -9,6 +9,7 @@ import { describe, it, expect } from 'vitest';
 import * as fc from 'fast-check';
 import {
   ENDPOINT_FLAVORS,
+  ENDPOINT_FLAVOR_SCHEMA,
   AlienSecError,
   AlienVaultAPIError,
   VirusTotalAPIError,
@@ -121,17 +122,17 @@ describe('ConfigurationError – property-based tests', () => {
 
 describe('EndpointFlavor – property-based tests', () => {
   const VALID_FLAVORS = new Set(ENDPOINT_FLAVORS);
-
-  function isValidFlavor(value: string): boolean {
-    return VALID_FLAVORS.has(value);
-  }
+  const INVALID_CASE_VARIANTS = Array.from(
+    new Set(ENDPOINT_FLAVORS.flatMap(flavor => [flavor.toUpperCase(), `${flavor[0].toUpperCase()}${flavor.slice(1)}`]))
+  ).filter(variant => !VALID_FLAVORS.has(variant));
+  const [FIRST_INVALID_CASE_VARIANT, ...OTHER_INVALID_CASE_VARIANTS] = INVALID_CASE_VARIANTS;
 
   it('rejects arbitrary strings that are not valid flavors', () => {
     fc.assert(
       fc.property(
         fc.string().filter(s => !VALID_FLAVORS.has(s)),
         s => {
-          expect(isValidFlavor(s)).toBe(false);
+          expect(ENDPOINT_FLAVOR_SCHEMA.safeParse(s).success).toBe(false);
         }
       )
     );
@@ -139,14 +140,16 @@ describe('EndpointFlavor – property-based tests', () => {
 
   it('accepts every known valid flavor', () => {
     for (const flavor of VALID_FLAVORS) {
-      expect(isValidFlavor(flavor)).toBe(true);
+      expect(ENDPOINT_FLAVOR_SCHEMA.safeParse(flavor).success).toBe(true);
     }
   });
 
   it('flavor validation is case-sensitive', () => {
+    expect(FIRST_INVALID_CASE_VARIANT).toBeDefined();
+
     fc.assert(
-      fc.property(fc.constantFrom('PKG', 'POWERSHELL', 'APT', 'RPM', 'Pkg', 'Apt'), upper => {
-        expect(isValidFlavor(upper)).toBe(false);
+      fc.property(fc.constantFrom(FIRST_INVALID_CASE_VARIANT!, ...OTHER_INVALID_CASE_VARIANTS), upper => {
+        expect(ENDPOINT_FLAVOR_SCHEMA.safeParse(upper).success).toBe(false);
       })
     );
   });

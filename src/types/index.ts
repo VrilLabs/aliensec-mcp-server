@@ -1,3 +1,5 @@
+import { z } from 'zod';
+
 /**
  * AlienSec MCP Server - Core Type Definitions
  *
@@ -63,6 +65,7 @@ export interface AppConfig {
 // ============================================================================
 
 export const ENDPOINT_FLAVORS = ['pkg', 'powershell', 'apt', 'rpm'] as const;
+export const ENDPOINT_FLAVOR_SCHEMA = z.enum(ENDPOINT_FLAVORS);
 
 export type EndpointFlavor = (typeof ENDPOINT_FLAVORS)[number];
 
