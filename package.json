@@ -37,7 +37,7 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.17.3",
     "@modelcontextprotocol/server": "^2.0.0",
-    "better-sqlite3-multiple-ciphers": "^7.0.0",
+    "better-sqlite3-multiple-ciphers": "^13.0.3",
     "node-fetch": "^3.3.2",
     "pino": "^9.4.0",
     "pino-http": "^10.3.0",
@@ -60,7 +60,7 @@
     "vitest": "^4.1.10"
   },
   "engines": {
-    "node": ">=18.0.0",
+    "node": ">=22.0.0",
     "npm": ">=8.0.0"
   },
   "files": [

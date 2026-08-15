@@ -27,7 +27,8 @@
       "@database/*": ["src/database/*"],
       "@tools/*": ["src/tools/*"],
       "@types/*": ["src/types/*"],
-      "@utils/*": ["src/utils/*"]
+      "@utils/*": ["src/utils/*"],
+      "better-sqlite3-multiple-ciphers": ["node_modules/better-sqlite3-multiple-ciphers/index.d.ts"]
     }
   },
   "include": ["src/**/*"],
