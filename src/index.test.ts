@@ -218,10 +218,11 @@ vi.mock('crypto', () => {
 vi.mock('@modelcontextprotocol/server', () => {
   const mockMcpServer = {
     registerTool: vi.fn(),
-    invokeTool: vi.fn(),
   };
   return {
-    McpServer: vi.fn(() => mockMcpServer),
+    McpServer: vi.fn(function () {
+      return mockMcpServer;
+    }),
     serveStdio: vi.fn(),
   };
 });
@@ -563,7 +564,6 @@ describe('MCP Server Module', () => {
     const server = McpServer();
     expect(server).toBeDefined();
     expect(server.registerTool).toBeDefined();
-    expect(server.invokeTool).toBeDefined();
   });
 });
 

@@ -47,6 +47,10 @@ describe('AlienVault Module', () => {
     resetAlienVaultClient();
     resetDatabase();
     vi.clearAllMocks();
+    // mockFetch is a plain vi.fn(), not a vi.spyOn() spy, so clearAllMocks/restoreAllMocks
+    // never drain its queued .mockResolvedValueOnce() values - reset it explicitly so an
+    // unconsumed queue entry from one test can't leak into the next.
+    mockFetch.mockReset();
 
     // Setup test configuration
     testConfig = {
