@@ -91,4 +91,5 @@ jobs:
         uses: gitleaks/gitleaks-action@bcfb9cce635345aac9996cedc19b2de8e01b894f
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_KEY }}
           GITLEAKS_CONFIG: .gitleaks.toml
