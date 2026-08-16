@@ -6,7 +6,7 @@
 </div>
 
 # AlienSec MCP Server
-[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/VrilLabs/aliensec-mcp-server/badge)](https://scorecard.dev/viewer/?uri=github.com/VrilLabs/aliensec-mcp-server)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/VRIL-LABS/aliensec-mcp-server/badge)](https://scorecard.dev/viewer/?uri=github.com/VRIL-LABS/aliensec-mcp-server)
 
 **Production-Ready AlienVault OTX Endpoint Security Scanning MCP Server with VirusTotal Integration**
 
@@ -17,7 +17,7 @@
 
 <sub>// crafted for the security community — funding keeps it maintained</sub>
 
-[![GitHub Sponsors](assets/donate/github-sponsors.svg)](https://github.com/sponsors/VrilLabs)
+[![GitHub Sponsors](assets/donate/github-sponsors.svg)](https://github.com/sponsors/VRIL-LABS)
 [![Open Collective](assets/donate/open-collective.svg)](https://opencollective.com/vrillabs)
 [![Ko-fi](assets/donate/ko-fi.svg)](https://ko-fi.com/vrillabs)
 [![Buy Me a Coffee](assets/donate/buy-me-a-coffee.svg)](https://buymeacoffee.com/vrillabs)
@@ -98,7 +98,7 @@ This server enables AI agents and applications to perform security scans on vari
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/VrilLabs/aliensec-mcp-server.git
+git clone https://github.com/VRIL-LABS/aliensec-mcp-server.git
 cd aliensec-mcp-server
 ```
 
